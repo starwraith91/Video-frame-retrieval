@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Video_Keyframe_Extraction", "Video_Keyframe_Extraction\Video_Keyframe_Extraction.vcxproj", "{EED26787-CAF3-4415-A405-C23539E6B34E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Video_Keyframe_Extraction", "Video_Keyframe_Extraction\Video_Keyframe_Extraction.vcxproj", "{733B8DFA-247C-491E-A88B-C968EB8ACB74}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EED26787-CAF3-4415-A405-C23539E6B34E}.Debug|Win32.ActiveCfg = Debug|Win32
-		{EED26787-CAF3-4415-A405-C23539E6B34E}.Debug|Win32.Build.0 = Debug|Win32
-		{EED26787-CAF3-4415-A405-C23539E6B34E}.Release|Win32.ActiveCfg = Release|Win32
-		{EED26787-CAF3-4415-A405-C23539E6B34E}.Release|Win32.Build.0 = Release|Win32
+		{733B8DFA-247C-491E-A88B-C968EB8ACB74}.Debug|Win32.ActiveCfg = Debug|Win32
+		{733B8DFA-247C-491E-A88B-C968EB8ACB74}.Debug|Win32.Build.0 = Debug|Win32
+		{733B8DFA-247C-491E-A88B-C968EB8ACB74}.Release|Win32.ActiveCfg = Release|Win32
+		{733B8DFA-247C-491E-A88B-C968EB8ACB74}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
