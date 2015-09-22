@@ -39,9 +39,6 @@
     <ClInclude Include="VideoShotRetrieval.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FrameClassification.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -63,9 +60,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="VideoShotRetrieval.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FrameClassification.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

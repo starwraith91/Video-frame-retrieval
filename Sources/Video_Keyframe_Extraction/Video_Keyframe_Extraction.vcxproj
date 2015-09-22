@@ -45,7 +45,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -57,7 +57,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>OpenCV2/core;OpenCV2/highgui;OpenCV2/imgproc;OpenCV2/ml;OpenCV2/features2d;OpenCV2/nonfree;OpenCV2/flann;OpenCV2/objdetect ;OpenCV2/dll;MPEG7</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>opencv2/core;opencv2/highgui;opencv2/imgproc;opencv2/ml;opencv2/features2d;opencv2/nonfree;opencv2/flann;opencv2/objdetect;opencv2/dll;MPEG7</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
@@ -83,7 +83,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>OpenCV2/core;OpenCV2/highgui;OpenCV2/imgproc;OpenCV2/ml;OpenCV2/features2d;OpenCV2/nonfree;OpenCV2/flann;OpenCV2/objdetect;OpenCV2/dll;MPEG7</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>opencv2/core;opencv2/highgui;opencv2/imgproc;opencv2/ml;opencv2/features2d;opencv2/nonfree;opencv2/flann;opencv2/objdetect;opencv2/dll;MPEG7</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
@@ -103,7 +103,6 @@
   <ItemGroup>
     <ClInclude Include="BasicFunction.h" />
     <ClInclude Include="FeatureExtraction.h" />
-    <ClInclude Include="FrameClassification.h" />
     <ClInclude Include="KeyframeExtraction.h" />
     <ClInclude Include="MachineLearning.h" />
     <ClInclude Include="stdafx.h" />
@@ -113,7 +112,6 @@
   <ItemGroup>
     <ClCompile Include="BasicFunction.cpp" />
     <ClCompile Include="FeatureExtraction.cpp" />
-    <ClCompile Include="FrameClassification.cpp" />
     <ClCompile Include="KeyframeExtraction.cpp" />
     <ClCompile Include="MachineLearning.cpp" />
     <ClCompile Include="stdafx.cpp">

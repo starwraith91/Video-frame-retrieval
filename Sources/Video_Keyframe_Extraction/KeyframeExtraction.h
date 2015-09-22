@@ -5,60 +5,9 @@
 #include "stdafx.h"
 #include "FeatureExtraction.h"
 
-struct KeyFrame
-{
-	int frameID;
-	double distCurrentNext;
-	double distLastNext;
-};
-
-struct KeyFrameDescriptor
-{
-	ColorStructureDescriptor *colorDesc;
-	EdgeHistogramDescriptor *edgeDesc;
-	HomogeneousTextureDescriptor *textureDesc;
-
-	KeyFrameDescriptor()
-	{
-		colorDesc = NULL;
-		edgeDesc = NULL;
-		textureDesc = NULL;
-	}
-
-	~KeyFrameDescriptor()
-	{
-		//DeleteDescriptor();
-	}
-
-	KeyFrameDescriptor& operator = (KeyFrameDescriptor desc)
-	{
-		this->colorDesc   = desc.colorDesc;
-		this->edgeDesc	  = desc.edgeDesc;
-		this->textureDesc = desc.textureDesc;
-		return *this;
-	}
-
-	void DeleteDescriptor()
-	{
-		if (colorDesc!=NULL)
-			delete colorDesc;
-
-		if (edgeDesc != NULL)
-			delete edgeDesc;
-
-		if (textureDesc != NULL)
-			delete textureDesc;
-	}
-};
-
 ///----------SUPPORT-METHOD----------///
 
 double GetSDOfDistance(vector<KeyFrame> listKeyFrame, double mean);
-
-vector<float> GetMomentDescriptor(Mat image);
-
-//Extract color, edge and texture hist
-KeyFrameDescriptor CalcMPEGDescriptor(Mat img);
 
 bool IsHighCurvaturePoint(vector<float> listAngle, int windowSize, int index);
 

@@ -50,7 +50,7 @@ void TestQueryVideoByFrame(string videoName,string nameExtension)
 	string videoname = "Data/Raws/" + videoName + nameExtension;
 	VideoCapture cap(videoname);
 	int numFrame = cap.get(CV_CAP_PROP_FRAME_COUNT);
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 	int randomFrame = rand() % numFrame;
 	cap.set(CV_CAP_PROP_POS_FRAMES, (double)randomFrame);
 	Mat testImage;
@@ -71,17 +71,107 @@ void TestQueryVideoByFrame(string videoName,string nameExtension)
 	VideoShotRetrieval(videoName, testFrame);
 }
 
+void CreateBOWDictionary()
+{
+	//--------Using SURF as feature extractor and FlannBased for assigning a new point to the nearest one in the dictionary
+	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("FlannBased");
+	Ptr<DescriptorExtractor> extractor = new SurfDescriptorExtractor();
+	SurfFeatureDetector detector(500);
+
+	//---dictionary size=number of cluster's centroids
+	int dictionarySize = 1000;
+	BOWImgDescriptorExtractor bowDE(extractor, matcher);
+
+//	CreateVocaburary(bowDE, dictionarySize);
+
+	CreateBOWTrainingSet(dictionarySize, detector, bowDE);
+}
+
+int TestANNModel()
+{
+	//--------Using SURF as feature extractor and FlannBased for assigning a new point to the nearest one in the dictionary
+	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("FlannBased");
+	Ptr<DescriptorExtractor> extractor = new SurfDescriptorExtractor();
+	SurfFeatureDetector detector(500);
+
+	//---dictionary size=number of cluster's centroids
+	int dictionarySize = 1000;
+	BOWImgDescriptorExtractor bowDE(extractor, matcher);
+
+	bowDE.setVocabulary( LoadBOWDictionaryFromFile("Data/BOW_dictionary.xml") );
+
+	CvANN_MLP mlp;
+	mlp.load("Data/ANN_Model.txt");
+
+	Mat testImage = imread("Data/Test_images/shot_17251.png");
+
+	Mat bowDescriptor;
+	vector<KeyPoint> keypoint;
+	detector.detect(testImage, keypoint);
+	if (keypoint.size() > 0)
+	{
+		bowDE.compute(testImage, keypoint, bowDescriptor);
+
+		Mat response(1, dictionarySize, CV_32F);
+		mlp.predict(bowDescriptor, response);
+
+		int predictLabel = 0;
+		int maxValue = response.at<float>(0, 0);
+		for (int i = 1; i < response.cols; i++)
+		{
+			int value = response.at<float>(0, i);
+			if (maxValue < value)
+			{
+				maxValue = value;
+				predictLabel = i;
+			}
+		}
+
+		return predictLabel;
+	}
+	else
+	{
+		cout << "No keypoint can be found in this image. Cannot do predict class." << endl;
+
+		return -1;
+	}
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-	string videoName = "Super_Hero_Taisen";
+	//string videoName = "Shinkenger_vs_Goseiger";
 
-	string nameExtension = ".mkv";
+	//string nameExtension = ".flv";
 
-//	VideoShotExtraction(videoName, nameExtension);
+	//VideoShotExtraction(videoName, nameExtension);
 
-	ExtractAndSaveKeyFrame(videoName);
+	//ExtractAndSaveKeyFrame(videoName);
 
-	TestQueryVideoByFrame(videoName, nameExtension);
+	//TestQueryVideoByFrame(videoName, nameExtension);
+
+	//CreateBOWDictionary();
+
+	int classLabel = TestANNModel();
+
+	string videoName = "", nameExtension = "";
+
+	switch (classLabel)
+	{
+	case 0:
+		videoName = "Gokaiger_Ep40";
+		nameExtension = ".mp4";
+		break;
+	case 1:
+		videoName = "Shinkenger_vs_Goseiger";
+		nameExtension = ".flv";
+		break;
+	case 2:
+		videoName = "Super_Hero_Taisen";
+		nameExtension = ".mkv";
+		break;
+	}
+
+	cout << "This frame belong to video " << videoName << nameExtension << endl;
 
 	return 0;
 }

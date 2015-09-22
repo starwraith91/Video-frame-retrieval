@@ -14,91 +14,6 @@ double GetSDOfDistance(vector<KeyFrame> listKeyFrame, double mean)
 	return sqrt(sum);
 }
 
-///-------NEAREST FEATURE POINT METHOD--------///
-
-vector<float> GetMomentDescriptor(Mat image)
-{
-	Mat normImage;
-	image.convertTo(normImage, CV_32FC3);
-
-	vector<float> featureVector;
-
-	//Get a list of Y values from all pixels
-	vector<float> listYValues, listCrValues, listCbValues;
-	for (int i = 0; i < normImage.rows; i++)
-	{
-		for (int j = 0; j < normImage.cols; j++)
-		{
-			Vec3f value = normImage.at<Vec3f>(i, j);
-			listYValues .push_back(value.val[0]);
-			listCrValues.push_back(value.val[1]);
-			listCbValues.push_back(value.val[2]);
-//			cout << value.val[0] << "	" << value.val[1] << "	" << value.val[2] << endl
-		}
-	}
-
-	float meanY		= GetMean<float>(listYValues);
-	float sdY		= GetStandardDeviation<float>(listYValues,meanY);
-	float skewY		= GetSkewness<float>(listYValues, meanY);
-//	float kurtosisY = GetKurtosis<float>(listYValues, meanY);
-
-//	float meanCr	 = GetMean<float>(listCrValues);
-//	float sdCr		 = GetStandardDeviation<float>(listCrValues, meanCr);
-//	float skewCr	 = GetSkewness<float>(listCrValues, meanCr);
-//	float kurtosisCr = GetKurtosis<float>(listCrValues, meanCr);
-
-//	float meanCb	 = GetMean<float>(listCbValues);
-//	float sdCb		 = GetStandardDeviation<float>(listCbValues, meanCb);
-//	float skewCb	 = GetSkewness<float>(listCbValues, meanCb);
-//	float kurtosisCb = GetKurtosis<float>(listCbValues, meanCb);
-
-	featureVector.push_back(meanY);
-	featureVector.push_back(sdY);
-	featureVector.push_back(skewY);
-//	featureVector.push_back(kurtosisY);
-
-//	featureVector.push_back(meanCb);
-//	featureVector.push_back(sdCb);
-//	featureVector.push_back(skewCb);
-//	featureVector.push_back(kurtosisCb);
-
-//	featureVector.push_back(meanCr);
-//	featureVector.push_back(sdCr);
-//	featureVector.push_back(skewCr);
-//	featureVector.push_back(kurtosisCr);
-
-	NormalizeFeatureVector(featureVector);
-
-	return featureVector;
-}
-
-///-------CURVATURE POINT METHOD--------///
-
-KeyFrameDescriptor CalcMPEGDescriptor(Mat img)
-{
-	KeyFrameDescriptor descriptor;
-
-	Feature *featureExtractor = new Feature();
-
-	Frame *frame = new Frame(img);
-
-	descriptor.colorDesc = featureExtractor->getColorStructureD(frame, 64);
-	descriptor.edgeDesc = featureExtractor->getEdgeHistogramD(frame);
-
-	Mat grayImg(img.rows,img.cols,CV_8U);
-	Frame *grayFrame = new Frame(img.cols,img.rows);
-	cvtColor(img, grayImg, CV_BGR2GRAY);
-	grayFrame->setGray(grayImg);
-	descriptor.textureDesc = featureExtractor->getHomogeneousTextureD(grayFrame);
-	delete grayFrame;
-
-	delete frame;
-
-	delete featureExtractor;
-
-	return descriptor;
-}
-
 bool IsHighCurvaturePoint(vector<float> listAngle,int windowSize,int index)
 {
 	int n = listAngle.size();
@@ -158,7 +73,10 @@ vector<int> CalcCurvatureAnglePoint(vector<float> listDistance, float angleMax, 
 
 						float numerator = dOP*dOP + dPR*dPR - dOR*dOR;
 						float denominator = 2 * dOP * dPR;
-						float alpha = acosf(numerator / denominator) * 180.0f / (float)M_PI;
+						float fraction = Clampf(numerator/denominator, -1.0f, 1.0f);
+
+						float value = acosf(fraction) * 180.0f / (float)M_PI;
+						float alpha = (int)(value + 0.5f);
 
 						if (alpha < alphaLC)
 						{
@@ -439,7 +357,7 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 	previousDescriptor.DeleteDescriptor();
 
 //	vector<int> listHighCurvaturePoint;
-	float angleMax = 90;
+	float angleMax = 60;
 	int dMax = 3;
 	int dMin = 1;
 	keyFrames = CalcCurvatureAnglePoint(_listDistance, angleMax, dMin, dMax);

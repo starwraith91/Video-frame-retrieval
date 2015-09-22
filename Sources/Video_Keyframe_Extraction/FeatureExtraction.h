@@ -5,6 +5,52 @@
 
 #include "BasicFunction.h"
 
+struct KeyFrame
+{
+	int frameID;
+	double distCurrentNext;
+	double distLastNext;
+};
+
+struct KeyFrameDescriptor
+{
+	ColorStructureDescriptor *colorDesc;
+	EdgeHistogramDescriptor *edgeDesc;
+	HomogeneousTextureDescriptor *textureDesc;
+
+	KeyFrameDescriptor()
+	{
+		colorDesc = NULL;
+		edgeDesc = NULL;
+		textureDesc = NULL;
+	}
+
+	~KeyFrameDescriptor()
+	{
+		//DeleteDescriptor();
+	}
+
+	KeyFrameDescriptor& operator = (KeyFrameDescriptor desc)
+	{
+		this->colorDesc = desc.colorDesc;
+		this->edgeDesc = desc.edgeDesc;
+		this->textureDesc = desc.textureDesc;
+		return *this;
+	}
+
+	void DeleteDescriptor()
+	{
+		if (colorDesc != NULL)
+			delete colorDesc;
+
+		if (edgeDesc != NULL)
+			delete edgeDesc;
+
+		if (textureDesc != NULL)
+			delete textureDesc;
+	}
+};
+
 //--------VIDEO SHOT CLASSIFICATION--------//
 
 Mat ExtractSURFescriptor(string path);
@@ -22,6 +68,12 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize);
 void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWImgDescriptorExtractor bowDE);
 
 void LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label);
+
+//Extract color moment descriptor
+vector<float> GetMomentDescriptor(Mat image);
+
+//Extract color, edge and texture hist
+KeyFrameDescriptor CalcMPEGDescriptor(Mat img);
 
 //---------BASIC IMAGE PROCESSING-----------//
 

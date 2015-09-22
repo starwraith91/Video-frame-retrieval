@@ -159,6 +159,22 @@ vector<float> ToVector(Mat mat)
 	return vectorFeature;
 }
 
+float Clampf(float value, float minValue, float maxValue)
+{
+	float resultVal = value;
+
+	if (resultVal < minValue)
+	{
+		resultVal = minValue;
+	}
+	else if (resultVal > maxValue)
+	{
+		resultVal = maxValue;
+	}
+
+	return resultVal;
+}
+
 float CalcEntropy(float value, float total)
 {
 	if (value > 0)

@@ -35,7 +35,7 @@ Mat ExtractSIFTDescriptor(string path)
 	return descriptors;
 }
 
-#define _NUM_CLASSES 5
+int numClassVideo = 0;
 
 void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 {
@@ -44,22 +44,18 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 	int retries = 1;
 	int flags = KMEANS_PP_CENTERS;
 
-	//Get a large set of image to be training set
+	//Get a large set of images to be training set
 	string trainpath = "Data/Key frames/";
-
-	vector<string> _listClass;
-	_listClass.push_back("Gokaiger_ep40");
-	_listClass.push_back("Shinkenger_vs_Goseiger");
-	_listClass.push_back("Super_Hero_Taisen");
+	vector<string> _listClass = ReadFileList(trainpath);
+	numClassVideo = _listClass.size();
 
 	int numClass = (int)_listClass.size();
+	BOWKMeansTrainer bowTrainer(dictionarySize, tc, retries, flags);
 	for (int classIndex = 0; classIndex < numClass; classIndex++)
 	{
-		BOWKMeansTrainer bowTrainer(dictionarySize, tc, retries, flags);
-
 		string path = trainpath + _listClass[classIndex] + "/";
 		vector<string> _listStringName = ReadFileList(path.c_str());
-		int numFileName = (int)_listStringName.size();
+		int numFileName = 250;
 		for (int j = 0; j < numFileName; j++)
 		{
 			string filename = path + _listStringName[j];
@@ -77,12 +73,8 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 				cout << "This image doesn't contain any feature point" << endl;
 			}
 		}	
-
-		ClusterFeature(bowTrainer, bowDE, _listClass[classIndex]);
 	}
-
-	//ClusterFeature(bowTrainer, bowDE, "");
-
+	ClusterFeature(bowTrainer, bowDE, "");
 }
 
 void ClusterFeature(BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowDE, string dictionaryName)
@@ -97,7 +89,7 @@ void ClusterFeature(BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowD
 	Mat dictionary = bowTrainer.cluster();
 	bowDE.setVocabulary(dictionary);
 
-	string filename = "Data/BOW_data/dictionaries/" + dictionaryName + "_cluster.xml";
+	string filename = "Data/BOW_dictionary.xml";
 	FileStorage fs(filename, FileStorage::WRITE);
 	fs << "dictionary" << dictionary;
 }
@@ -118,26 +110,24 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 	//Get a large set of image to be training set
 	string trainpath = "Data/Key frames/";
 
-	string _listClass[_NUM_CLASSES];
-	_listClass[0].assign("Gokaiger_ep40");
-	_listClass[1].assign("Home_Alone_1");
-	_listClass[2].assign("Shinkenger_vs_Goseiger");
+	vector<string> _listClass = ReadFileList(trainpath);
+	numClassVideo = _listClass.size();
 
 	Mat bowDescriptor;
 
-	for (int classIndex = 0; classIndex < 3; classIndex++)
+	string vocabularyPath = "Data/BOW_dictionary.xml";
+	bowDE.setVocabulary(LoadBOWDictionaryFromFile(vocabularyPath));
+
+	Mat trainingData(0, dictionarySize, CV_32FC1);
+
+	Mat trainingLabel(0, 1, CV_32FC1);
+
+	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
-		string vocabularyPath = "Data/BOW_data/dictionaries/" + _listClass[classIndex] + "_cluster.xml";
-		bowDE.setVocabulary(LoadBOWDictionaryFromFile(vocabularyPath));
-
-		Mat trainingData(0, dictionarySize, CV_32FC1);
-
-		Mat trainingLabel(0, 1, CV_32FC1);
-
 		string path = trainpath + _listClass[classIndex] + "/";
 		vector<string> _listStringName = ReadFileList(path.c_str());
 
-		cout << "There are " << _listStringName.size() << " files in this folder" << endl;
+		cout << "There are " << _listStringName.size() << " files in folder " << _listClass[classIndex] << endl;
 
 		int numFileName = (int)_listStringName.size();
 		for (int filenameIndex = 0; filenameIndex < numFileName; filenameIndex++)
@@ -157,8 +147,7 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 
 				trainingData.push_back(bowDescriptor);
 
-				int shotID = IdentifyShotFromKeyFrame(_listStringName[filenameIndex]);
-				trainingLabel.push_back((float)shotID);
+				trainingLabel.push_back((float)classIndex);
 			}
 			else
 			{
@@ -167,24 +156,24 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 		}
 
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
-
-		//Write training data to file for future use。	
-		string pathTrainData = "Data/BOW_data/descriptors/" + _listClass[classIndex] + ".xml";
-		FileStorage fs(pathTrainData, FileStorage::WRITE);
-		fs << "training_data_BOW" << trainingData;
-		fs << "training_label_BOW" << trainingLabel;
-		cout << "Finish creating training data for " << _listClass[classIndex] << endl;
-
-		//Encoding class name values
-		string pathMapData = "Data/" + _listClass[classIndex] + "_map.txt";
-		map<float, float> mapClassEncode = ClassEncoding(pathMapData,trainingLabel);
-		cout << "Finish encoding class name to number for " << _listClass[classIndex] << endl;
-
-		//Initialize ANN for training
-		string pathANNModel = "Data/ANN_Model/" + _listClass[classIndex] + ".txt";
-		CreateANNTrainingModel(pathANNModel, dictionarySize, mapClassEncode, trainingData, trainingLabel);
-		cout << "Finish creating ANN training model for " << _listClass[classIndex] << endl;
 	}
+
+	//Write training data to file for future use。	
+	string pathTrainData = "Data/BOW_training_data.xml";
+	FileStorage fs(pathTrainData, FileStorage::WRITE);
+	fs << "training_data_BOW" << trainingData;
+	fs << "training_label_BOW" << trainingLabel;
+	cout << "Finish creating training data"<<endl;
+
+	////Encoding class name values
+	//string pathMapData = "Data/ANN_map.txt";
+	//map<float, float> mapClassEncode = ClassEncoding(pathMapData, trainingLabel);
+	//cout << "Finish encoding class name " << endl;
+
+	//Initialize ANN for training
+	string pathANNModel = "Data/ANN_Model.txt";
+	CreateANNTrainingModel(pathANNModel, dictionarySize, trainingData, trainingLabel, numClassVideo);
+	cout << "Finish creating ANN training model"<< endl;
 }
 
 Mat ExtractBOWFeature(BOWImgDescriptorExtractor bowDE, SurfFeatureDetector detector, Mat image)
@@ -255,4 +244,86 @@ double CalculateEdgeMatchingRate(Mat imgEdge1, Mat imgEdge2)
 	//}
 
 	return matchingRate;
+}
+
+
+KeyFrameDescriptor CalcMPEGDescriptor(Mat img)
+{
+	KeyFrameDescriptor descriptor;
+
+	Feature *featureExtractor = new Feature();
+
+	Frame *frame = new Frame(img);
+
+	descriptor.colorDesc = featureExtractor->getColorStructureD(frame, 64);
+	descriptor.edgeDesc = featureExtractor->getEdgeHistogramD(frame);
+
+	Mat grayImg(img.rows, img.cols, CV_8U);
+	Frame *grayFrame = new Frame(img.cols, img.rows);
+	cvtColor(img, grayImg, CV_BGR2GRAY);
+	grayFrame->setGray(grayImg);
+	descriptor.textureDesc = featureExtractor->getHomogeneousTextureD(grayFrame);
+	delete grayFrame;
+
+	delete frame;
+
+	delete featureExtractor;
+
+	return descriptor;
+}
+
+vector<float> GetMomentDescriptor(Mat image)
+{
+	Mat normImage;
+	image.convertTo(normImage, CV_32FC3);
+
+	vector<float> featureVector;
+
+	//Get a list of Y values from all pixels
+	vector<float> listYValues, listCrValues, listCbValues;
+	for (int i = 0; i < normImage.rows; i++)
+	{
+		for (int j = 0; j < normImage.cols; j++)
+		{
+			Vec3f value = normImage.at<Vec3f>(i, j);
+			listYValues.push_back(value.val[0]);
+			listCrValues.push_back(value.val[1]);
+			listCbValues.push_back(value.val[2]);
+			//			cout << value.val[0] << "	" << value.val[1] << "	" << value.val[2] << endl
+		}
+	}
+
+	float meanY = GetMean<float>(listYValues);
+	float sdY = GetStandardDeviation<float>(listYValues, meanY);
+	float skewY = GetSkewness<float>(listYValues, meanY);
+	//	float kurtosisY = GetKurtosis<float>(listYValues, meanY);
+
+	//	float meanCr	 = GetMean<float>(listCrValues);
+	//	float sdCr		 = GetStandardDeviation<float>(listCrValues, meanCr);
+	//	float skewCr	 = GetSkewness<float>(listCrValues, meanCr);
+	//	float kurtosisCr = GetKurtosis<float>(listCrValues, meanCr);
+
+	//	float meanCb	 = GetMean<float>(listCbValues);
+	//	float sdCb		 = GetStandardDeviation<float>(listCbValues, meanCb);
+	//	float skewCb	 = GetSkewness<float>(listCbValues, meanCb);
+	//	float kurtosisCb = GetKurtosis<float>(listCbValues, meanCb);
+
+	featureVector.push_back(meanY);
+	featureVector.push_back(sdY);
+	featureVector.push_back(skewY);
+	//	featureVector.push_back(kurtosisY);
+
+	//	featureVector.push_back(meanCb);
+	//	featureVector.push_back(sdCb);
+	//	featureVector.push_back(skewCb);
+	//	featureVector.push_back(kurtosisCb);
+
+	//	featureVector.push_back(meanCr);
+	//	featureVector.push_back(sdCr);
+	//	featureVector.push_back(skewCr);
+	//	featureVector.push_back(kurtosisCr);
+
+	NormalizeFeatureVector(featureVector);
+
+	return featureVector;
 }

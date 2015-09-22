@@ -149,6 +149,8 @@ void Sort(vector<T> &listValue)
 	}
 }
 
+float Clampf(float value, float minValue, float maxValue);
+
 Mat ToMat(vector<float> vec);
 
 vector<float> ToVector(Mat mat);

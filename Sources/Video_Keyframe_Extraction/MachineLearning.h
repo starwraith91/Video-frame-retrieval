@@ -6,11 +6,11 @@
 #include "KeyframeExtraction.h"
 #include "FeatureExtraction.h"
 
-map<float, float> ClassEncoding(string path, Mat labels);
+//map<float, float> ClassEncoding(string path, Mat labels);
 
-map<float, float> LoadClassCode(string path);
+//map<float, float> LoadClassCode(string path);
 
-void CreateANNTrainingModel(string path, int inputSize, map<float, float> mapClassEncode, Mat training_data, Mat training_label);
+void CreateANNTrainingModel(string path, int inputSize, Mat training_data, Mat training_label, int numClass);
 
 void LoadANNModel(string path, CvANN_MLP &mlp);
 
