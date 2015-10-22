@@ -19,7 +19,7 @@ vector<int> CalcCurvatureAnglePoint(vector<float> listDistance, float angleMax, 
 void RemoveRedundantKeyframes(VideoCapture cap, vector<Mat> &listKeyframes);
 
 //Extract shot base on each pair of frames from a summary video into a small video
-void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotpath);
+void VideoShotExtractor(VideoCapture cap,string destinationFolder,string shotpath,int width=0, int height=0);
 
 //Extract key-frame using moments of YCbCr color space
 vector<int> KeyframeMomentExtractor(VideoCapture cap);

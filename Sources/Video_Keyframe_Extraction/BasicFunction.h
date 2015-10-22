@@ -13,6 +13,8 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <time.h>
+#include <Windows.h>
 
 //OpenCV header
 #include "core.hpp"
@@ -149,6 +151,23 @@ void Sort(vector<T> &listValue)
 	}
 }
 
+template <class T>
+void Shuffle(T *arr, size_t n)
+{
+	if (n > 1)
+	{
+		size_t i;
+		srand(time(NULL));
+		for (i = 0; i < n - 1; i++)
+		{
+			size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+			T t = arr[j];
+			arr[j] = arr[i];
+			arr[i] = t;
+		}
+	}
+}
+
 float Clampf(float value, float minValue, float maxValue);
 
 Mat ToMat(vector<float> vec);
@@ -160,6 +179,8 @@ vector<float> ToVector(Mat mat);
 float CalcVectorMagnitude(Mat mat);
 
 float CalcEuclidianDistance(Mat a, Mat b);
+
+float CalcDistanceFromSet(Mat a, Mat featureMatrix,int &index);
 
 float CalcEntropy(float value,float total);
 

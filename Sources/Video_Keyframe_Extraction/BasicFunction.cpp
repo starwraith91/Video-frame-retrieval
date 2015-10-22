@@ -135,7 +135,24 @@ float CalcEuclidianDistance(Mat a, Mat b)
 		totalValue += dist;
 	}
 
-	return sqrt(totalValue);
+	//return sqrt(totalValue);
+	return totalValue;
+}
+
+float CalcDistanceFromSet(Mat a, Mat featureMatrix,int &index)
+{
+	float minDistance = -1;
+	for (int i = 0; i < featureMatrix.rows; i++)
+	{
+		Mat b = featureMatrix.row(i);
+		float distance = CalcEuclidianDistance(a, b);
+		if (minDistance == -1 || minDistance > distance)
+		{
+			index = i;
+			minDistance = distance;
+		}
+	}
+	return minDistance;
 }
 
 Mat ToMat(vector<float> vec)

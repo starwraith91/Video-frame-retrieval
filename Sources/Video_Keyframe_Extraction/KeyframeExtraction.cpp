@@ -161,7 +161,7 @@ void RemoveRedundantKeyframes(VideoCapture cap, vector<int> &listKeyframes)
 	cout << endl;
 }
 
-void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotpath)
+void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotpath,int width,int height)
 {
 	ifstream in(shotpath);
 	vector<int> listFrameIndex;
@@ -177,16 +177,26 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 
 	int fps		 = (int)cap.get(CV_CAP_PROP_FPS);
 	int numFrame = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
-	int width	 = (int)cap.get(CV_CAP_PROP_FRAME_WIDTH);
-	int height	 = (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 
-	int fourcc = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
+	int w=0, h=0;
+	if (width != 0 && height != 0)
+	{
+		w = width;
+		h = height;
+	}
+	else
+	{
+		w = (int)cap.get(CV_CAP_PROP_FRAME_WIDTH);
+		h = (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	}
+
+	int fourcc	 = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
 
 	//	char EXT[] = { (char)(fourcc & 0XFF), (char)((fourcc & 0XFF00) >> 8), (char)((fourcc & 0XFF0000) >> 16), (char)((fourcc & 0XFF000000) >> 24), 0 };
 	//	cout << "Input codec type: " << EXT << endl;
 
-	Size sizeFrame(width, height);
-	int size[] = { width, height };
+	Size sizeFrame(w, h);
+	int size[] = { w, h };
 
 	cout << "Number of frames: " << numFrame << endl;
 
@@ -217,7 +227,10 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 				if (tempFrame.empty())
 					continue;
 
-				outputWriter.write(tempFrame);
+				Mat resizedFrame;
+				resize(tempFrame, resizedFrame, sizeFrame);
+
+				outputWriter.write(resizedFrame);
 
 				numCount++;
 
@@ -357,7 +370,7 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 	previousDescriptor.DeleteDescriptor();
 
 //	vector<int> listHighCurvaturePoint;
-	float angleMax = 60;
+	float angleMax = 90;
 	int dMax = 3;
 	int dMin = 1;
 	keyFrames = CalcCurvatureAnglePoint(_listDistance, angleMax, dMin, dMax);

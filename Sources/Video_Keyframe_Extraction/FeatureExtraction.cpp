@@ -5,38 +5,37 @@
 
 Mat ExtractSURFDescriptor(string path)
 {
-	Mat pImg = imread( path.c_str() );
+	Mat pImage = imread(path.c_str());
 
 	SurfFeatureDetector detector;
 	vector<KeyPoint> keypoints;
-	detector.detect(pImg, keypoints);
+	detector.detect(pImage, keypoints);
 	
 	// computing descriptors
 	Mat descriptors;
 	SurfDescriptorExtractor extractor;
-	extractor.compute(pImg, keypoints, descriptors);
+	extractor.compute(pImage, keypoints, descriptors);
 
 	return descriptors;
 }
 
 Mat ExtractSIFTDescriptor(string path)
 {
-	Mat pImg = imread(path.c_str());
+	Mat pImage = imread(path.c_str());
 
 	SiftFeatureDetector detector;
 	vector<KeyPoint> keypoints;
-	detector.detect(pImg, keypoints);
+	detector.detect(pImage, keypoints);
 
 	// computing descriptors
 	Mat descriptors;
 	SiftDescriptorExtractor extractor;
-	extractor.compute(pImg, keypoints, descriptors);
+	extractor.compute(pImage, keypoints, descriptors);
 
 	return descriptors;
 }
 
 int numClassVideo = 0;
-
 void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 {
 	//---dictionary size = number of cluster's centroids
@@ -55,14 +54,17 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 	{
 		string path = trainpath + _listClass[classIndex] + "/";
 		vector<string> _listStringName = ReadFileList(path.c_str());
-		int numFileName = 250;
+		Shuffle(&_listStringName[0], _listStringName.size());
+
+		int numFileName = 150;
 		for (int j = 0; j < numFileName; j++)
 		{
 			string filename = path + _listStringName[j];
 
 			cout << filename << endl;
 
-			Mat descriptors = ExtractSURFDescriptor(filename);
+			//Mat descriptors = ExtractSURFDescriptor(filename);
+			Mat descriptors = ExtractSIFTDescriptor(filename);
 
 			if (!descriptors.empty())
 			{
@@ -102,10 +104,12 @@ Mat LoadBOWDictionaryFromFile(string filename)
 	FileStorage fs(filename, FileStorage::READ);
 	fs["dictionary"] >> dictionary;
 
+	fs.release();
+
 	return dictionary;
 }
 
-void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWImgDescriptorExtractor bowDE)
+void CreateBOWTrainingSet(int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE)
 {
 	//Get a large set of image to be training set
 	string trainpath = "Data/Key frames/";
@@ -119,8 +123,7 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 	bowDE.setVocabulary(LoadBOWDictionaryFromFile(vocabularyPath));
 
 	Mat trainingData(0, dictionarySize, CV_32FC1);
-
-	Mat trainingLabel(0, 1, CV_32FC1);
+	Mat trainingLabel(0, 1, CV_32SC1);
 
 	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
@@ -147,7 +150,8 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 
 				trainingData.push_back(bowDescriptor);
 
-				trainingLabel.push_back((float)classIndex);
+				int shotID = IdentifyShotFromKeyFrame(_listStringName[filenameIndex]);
+				trainingLabel.push_back(shotID);
 			}
 			else
 			{
@@ -156,14 +160,17 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 		}
 
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
-	}
 
-	//Write training data to file for future use。	
-	string pathTrainData = "Data/BOW_training_data.xml";
-	FileStorage fs(pathTrainData, FileStorage::WRITE);
-	fs << "training_data_BOW" << trainingData;
-	fs << "training_label_BOW" << trainingLabel;
-	cout << "Finish creating training data"<<endl;
+		//Write training data to file for future use	
+		string pathTrainData = "Data/BOW_data/" + _listClass[classIndex] + ".xml";
+		FileStorage fs(pathTrainData, FileStorage::WRITE);
+		fs << "data_matrix" << trainingData;
+		fs << "data_label" << trainingLabel;
+
+		trainingData.release();
+
+		trainingLabel.release();
+	}
 
 	////Encoding class name values
 	//string pathMapData = "Data/ANN_map.txt";
@@ -171,12 +178,60 @@ void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWI
 	//cout << "Finish encoding class name " << endl;
 
 	//Initialize ANN for training
-	string pathANNModel = "Data/ANN_Model.txt";
-	CreateANNTrainingModel(pathANNModel, dictionarySize, trainingData, trainingLabel, numClassVideo);
-	cout << "Finish creating ANN training model"<< endl;
+	//string pathANNModel = "Data/ANN_Model.txt";
+	//CreateANNTrainingModel(pathANNModel, dictionarySize, trainingData, trainingLabel, numClassVideo);
+	//cout << "Finish creating ANN training model"<< endl;
 }
 
-Mat ExtractBOWFeature(BOWImgDescriptorExtractor bowDE, SurfFeatureDetector detector, Mat image)
+void CreateMPEGTrainingSet()
+{
+	//Get a large set of image to be training set
+	string trainpath = "Data/Key frames/";
+
+	vector<string> _listClass = ReadFileList(trainpath);
+	numClassVideo = _listClass.size();
+
+	Mat trainingData(0, 1, CV_32FC1);
+	Mat trainingLabel(0, 1, CV_32SC1);
+
+	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
+	{
+		string path = trainpath + _listClass[classIndex] + "/";
+		vector<string> _listStringName = ReadFileList(path.c_str());
+
+		cout << "There are " << _listStringName.size() << " files in folder " << _listClass[classIndex] << endl;
+
+		int numFileName = (int)_listStringName.size();
+		for (int filenameIndex = 0; filenameIndex < numFileName; filenameIndex++)
+		{
+			string filename = path + _listStringName[filenameIndex];
+
+			cout << filename << endl;
+
+			Mat testImage  = imread(filename);
+			Mat descriptor = ExtractMPEGFeature(testImage);
+
+			trainingData.push_back(descriptor);
+
+			int shotID = IdentifyShotFromKeyFrame(_listStringName[filenameIndex]);
+			trainingLabel.push_back(shotID);
+		}
+
+		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
+
+		//Write training data to file for future use	
+		string pathTrainData = "Data/BOW_data/" + _listClass[classIndex] + ".xml";
+		FileStorage fs(pathTrainData, FileStorage::WRITE);
+		fs << "data_matrix" << trainingData;
+		fs << "data_label" << trainingLabel;
+
+		trainingData.release();
+
+		trainingLabel.release();
+	}
+}
+
+Mat ExtractBOWFeature(BOWImgDescriptorExtractor bowDE, SiftFeatureDetector detector, Mat image)
 {
 	Mat bowDescriptor;
 	vector<KeyPoint> keypoint;
@@ -186,12 +241,67 @@ Mat ExtractBOWFeature(BOWImgDescriptorExtractor bowDE, SurfFeatureDetector detec
 	return bowDescriptor;
 }
 
-void LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label)
+Mat ExtractMPEGFeature(Mat pImage)
+{
+	vector<float> featureVector;
+
+	Feature *featureExtractor = new Feature();
+	Frame *frame = new Frame(pImage);
+
+	//Extract Color Layout Descriptor
+	int numYCoef = 10;
+	int numCCoef = 6;
+	ColorLayoutDescriptor *layout = featureExtractor->getColorLayoutD(frame, numYCoef, numCCoef);
+	for (int i = 0; i < numYCoef; i++)
+	{
+		featureVector.push_back((float)layout->m_y_coeff[i]);
+	}
+	for (int i = 0; i < numCCoef; i++)
+	{
+		featureVector.push_back((float)layout->m_cb_coeff[i]);
+		featureVector.push_back((float)layout->m_cr_coeff[i]);
+	}
+	float magnitude = GetMagnitude(featureVector);
+	for (int i = 0; i < featureVector.size(); i++)
+	{
+		if (magnitude>0)
+			featureVector[i] /= magnitude;
+		else
+			featureVector[i] = 0;
+	}
+	delete layout;
+
+	//Extract Edge Histogram Descriptor
+	EdgeHistogramDescriptor *edge = featureExtractor->getEdgeHistogramD(frame);
+	for (int i = 0; i < edge->GetSize(); i++)
+	{
+		featureVector.push_back(edge->GetEdgeHistogramD()[i]);
+	}
+	delete edge;
+
+	delete frame;
+
+	delete featureExtractor;
+
+	return ToMat(featureVector);
+}
+
+bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label)
 {
 	// read:
 	FileStorage fs(path, FileStorage::READ);
-	fs["training_data_BOW"] >> training_data;
-	fs["training_label_BOW"] >> training_label;
+
+	if (fs.isOpened())
+	{
+		fs["data_matrix"] >> training_data;
+		fs["data_label"] >> training_label;
+		fs.release();
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 //---------BASIC IMAGE PROCESSING-----------//
@@ -245,7 +355,6 @@ double CalculateEdgeMatchingRate(Mat imgEdge1, Mat imgEdge2)
 
 	return matchingRate;
 }
-
 
 KeyFrameDescriptor CalcMPEGDescriptor(Mat img)
 {

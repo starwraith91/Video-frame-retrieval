@@ -53,11 +53,9 @@ struct KeyFrameDescriptor
 
 //--------VIDEO SHOT CLASSIFICATION--------//
 
-Mat ExtractSURFescriptor(string path);
+Mat ExtractBOWFeature(BOWImgDescriptorExtractor bowDE, SiftFeatureDetector detector, Mat image);
 
-Mat ExtractSIFTDescriptor(string path);
-
-Mat ExtractBOWFeature(BOWImgDescriptorExtractor bowDE, SurfFeatureDetector detector, Mat image);
+Mat ExtractMPEGFeature(Mat image);
 
 Mat LoadBOWDictionaryFromFile(string filename);
 
@@ -65,9 +63,11 @@ void ClusterFeature(BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowD
 
 void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize);
 
-void CreateBOWTrainingSet(int dictionarySize, SurfFeatureDetector detector, BOWImgDescriptorExtractor bowDE);
+void CreateBOWTrainingSet(int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE);
 
-void LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label);
+void CreateMPEGTrainingSet();
+
+bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label);
 
 //Extract color moment descriptor
 vector<float> GetMomentDescriptor(Mat image);
