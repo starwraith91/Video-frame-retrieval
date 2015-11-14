@@ -26,6 +26,6 @@ void VideoShotRetrieval(string videoName, Mat queryFeature);
 void VideoShotRetrieval(string videoName, Mat trainingData, Mat trainingLabel, Mat queryFeature);
 
 //Test system efficiency with a set of test frame from database
-void TestDatabase(int database_type);
+void TestDatabase(string categoryName, int database_type);
 
 #endif

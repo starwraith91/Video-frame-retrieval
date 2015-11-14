@@ -59,13 +59,13 @@ Mat ExtractMPEGFeature(Mat image);
 
 Mat LoadBOWDictionaryFromFile(string filename);
 
-void ClusterFeature(BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowDE,string dictionaryName);
+void ClusterFeature(string categoryName, BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowDE, string dictionaryName);
 
-void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize);
+void CreateVocaburary(string categoryName, BOWImgDescriptorExtractor &bowDE, int dictionarySize);
 
-void CreateBOWTrainingSet(int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE);
+void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE);
 
-void CreateMPEGTrainingSet();
+void CreateMPEGTrainingSet(string categoryName);
 
 bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label);
 

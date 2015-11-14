@@ -173,12 +173,12 @@ void VideoShotRetrieval(string videoName, Mat trainingData, Mat trainingLabel, M
 	cout << "with minimum distance of " << sqrt(minDistance) << endl;
 }
 
-vector<string> SetupBOWModel(vector<Mat> &trainData, vector<Mat> &trainLabels)
+vector<string> SetupModel(string categoryName, vector<Mat> &trainData, vector<Mat> &trainLabels)
 {
 	cout << "Loading training data..." << endl;
 
 	//Get data stored in database
-	string path = "Data/BOW_Data/";
+	string path = "Data/BOW_Data/" + categoryName + "/";
 	vector<string> _listTrainingData = ReadFileList(path);
 
 	for (int i = 0; i < (int)_listTrainingData.size(); i++)
@@ -194,7 +194,7 @@ vector<string> SetupBOWModel(vector<Mat> &trainData, vector<Mat> &trainLabels)
 	return _listTrainingData;
 }
 
-int TestFrameClassification(vector<string> _listName, string imageName, Mat testImage, vector<Mat> trainData, vector<Mat> trainLabels, int numClass, int database_type)
+int TestFrameClassification(vector<string> _listName, string categoryName, string imageName, Mat testImage, vector<Mat> trainData, vector<Mat> trainLabels, int numClass, int database_type)
 {
 	//---Classify image into video class
 	Mat testFeature;
@@ -221,11 +221,10 @@ int TestFrameClassification(vector<string> _listName, string imageName, Mat test
 			minDistance = distance;
 		}
 	}
-
 	cout << imageName << " belongs to video " << _listName[label] << endl;
 
 	//---Search shot that may contain query frame
-	string videoPath = "Data/Raws/";
+	string videoPath = "Data/Raws/" + categoryName + "/";
 	vector<string> _listVideoName = ReadFileList(videoPath);
 	for (int i = 0; i < _listVideoName.size(); i++)
 	{
@@ -242,26 +241,27 @@ int TestFrameClassification(vector<string> _listName, string imageName, Mat test
 	return label;
 }
 
-void TestDatabase(int database_type)
+void TestDatabase(string categoryName, int database_type)
 {
 	vector<Mat> trainData, trainLabels;
-	vector<string> _listTrainingData = SetupBOWModel(trainData, trainLabels);
+	vector<string> _listTrainingData = SetupModel(categoryName, trainData, trainLabels);
 
 	if (database_type == 1)
-		bowDE.setVocabulary(LoadBOWDictionaryFromFile("Data/BOW_dictionary.xml"));
+		bowDE.setVocabulary(LoadBOWDictionaryFromFile("Data/" + categoryName + "_BOW_dictionary.xml"));
 
 	int countTotal = 0;
 	int countMatch = 0;
-	vector<string> _listTestClass = ReadFileList("Data/Test_images/");
+	string pathTest = "Data/Test_images/" + categoryName + "/";
+	vector<string> _listTestClass = ReadFileList(pathTest);
 	for (int index = 0; index < _listTestClass.size(); index++)
 	{
-		string pathClass = "Data/Test_images/" + _listTestClass[index] + "/";
+		string pathClass = pathTest + _listTestClass[index] + "/";
 		vector<string> _listTestImage = ReadFileList(pathClass);
 		for (int i = 0; i < _listTestImage.size(); i++)
 		{
 			string testpath = pathClass + _listTestImage[i];
 			Mat testImage = imread(testpath);
-			int predictLabel = TestFrameClassification(_listTestClass, _listTestImage[i], testImage, trainData, trainLabels, _listTestClass.size(), database_type);
+			int predictLabel = TestFrameClassification(_listTestClass, categoryName, _listTestImage[i], testImage, trainData, trainLabels, _listTestClass.size(), database_type);
 			if (predictLabel == index)
 			{
 				countMatch++;

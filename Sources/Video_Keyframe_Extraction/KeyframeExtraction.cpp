@@ -51,28 +51,35 @@ vector<int> CalcCurvatureAnglePoint(vector<float> listDistance, float angleMax, 
 	int leftIndex = 0;
 	int rightIndex = 0;
 	int currentIndex = 0;
-	float alphaLC = angleMax;
-	float dOP, dPR, dOR;
 
-	omp_set_num_threads(2);
-	#pragma omp parallel for shared(n,dMin,dMax,angleMax,_listAngle,listDistance) private(currentIndex,leftIndex,rightIndex,alphaLC, dOP, dPR, dOR)
+//	omp_set_num_threads(4);
+	#pragma omp parallel for shared(n,dMin,dMax,angleMax,_listAngle,listDistance) private(currentIndex,leftIndex,rightIndex)
 	for (currentIndex = dMin; currentIndex < n; currentIndex++)
 	{
-		alphaLC = angleMax;
+		float alphaLC = angleMax;
 		for (leftIndex = currentIndex - dMax; leftIndex <= currentIndex - dMin; leftIndex++)
 		{
 			if (leftIndex >= 0)
 			{
-				dOP = sqrtf(pow(listDistance[currentIndex] - listDistance[leftIndex], 2) + (float)pow(currentIndex - leftIndex, 2));
+				float left2 = (listDistance[currentIndex] - listDistance[leftIndex])*(listDistance[currentIndex] - listDistance[leftIndex]);
+				float leftIndex2 = (float)(currentIndex - leftIndex)*(currentIndex - leftIndex);
+				float dOP = left2 + leftIndex2;
+
 				for (rightIndex = currentIndex + dMin; rightIndex <= currentIndex + dMax; rightIndex++)
 				{
 					if (rightIndex < n)
 					{
-						dPR = sqrtf(pow(listDistance[currentIndex] - listDistance[rightIndex], 2) + (float)pow(currentIndex - rightIndex, 2));
-						dOR = sqrtf(pow(listDistance[leftIndex] - listDistance[rightIndex], 2) + (float)pow(leftIndex - rightIndex, 2));
+						float right2 = (listDistance[currentIndex] - listDistance[rightIndex])*(listDistance[currentIndex] - listDistance[rightIndex]);
+						float rightIndex2 = (float)(currentIndex - rightIndex)*(currentIndex - rightIndex);
+						float dPR = right2 + rightIndex2;
 
-						float numerator = dOP*dOP + dPR*dPR - dOR*dOR;
-						float denominator = 2 * dOP * dPR;
+						float boundary2 = (listDistance[leftIndex] - listDistance[rightIndex])*(listDistance[leftIndex] - listDistance[rightIndex]);
+						float boundaryIndex2 = (float)(leftIndex - rightIndex)*(leftIndex - rightIndex);
+						float dOR = boundary2 + boundaryIndex2;
+
+						//float numerator = dOP*dOP + dPR*dPR - dOR*dOR;
+						float numerator = dOP + dPR - dOR;
+						float denominator = 2 * sqrtf(dOP) * sqrtf(dPR);
 						float fraction = Clampf(numerator/denominator, -1.0f, 1.0f);
 
 						float value = acosf(fraction) * 180.0f / (float)M_PI;
@@ -166,82 +173,92 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 	ifstream in(shotpath);
 	vector<int> listFrameIndex;
 
-	int tempVal = 0;
-	do
+	string foldername = "Data/Video shots/" + destinationFolder;
+	if (CreateDirectoryA(foldername.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		in >> tempVal;
-		listFrameIndex.push_back(tempVal);
-	} while (!in.eof());
-
-	in.close();
-
-	int fps		 = (int)cap.get(CV_CAP_PROP_FPS);
-	int numFrame = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
-
-	int w=0, h=0;
-	if (width != 0 && height != 0)
-	{
-		w = width;
-		h = height;
-	}
-	else
-	{
-		w = (int)cap.get(CV_CAP_PROP_FRAME_WIDTH);
-		h = (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT);
-	}
-
-	int fourcc	 = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
-
-	//	char EXT[] = { (char)(fourcc & 0XFF), (char)((fourcc & 0XFF00) >> 8), (char)((fourcc & 0XFF0000) >> 16), (char)((fourcc & 0XFF000000) >> 24), 0 };
-	//	cout << "Input codec type: " << EXT << endl;
-
-	Size sizeFrame(w, h);
-	int size[] = { w, h };
-
-	cout << "Number of frames: " << numFrame << endl;
-
-	int lastIndex = 0;
-	int numKeyframe = (int)listFrameIndex.size();
-	for (int i = 1; i < numKeyframe; i++)
-	{
-		if (abs(listFrameIndex[i] - listFrameIndex[lastIndex]) >= fps)
+		int tempVal = 0;
+		do
 		{
-			//Init values
-			Mat tempFrame;
-			int numCount = 0;
+			in >> tempVal;
+			listFrameIndex.push_back(tempVal);
+		} while (!in.eof());
 
-			//Video writer
-			char *buffer = new char[255];
-			string tempStr = _itoa(i, buffer, 10);
-			string filename = "Data/Video shots/" + destinationFolder + "/shot_" + tempStr + ".avi";
+		in.close();
 
-			cout << "shot_" + tempStr + ".avi" << endl;
+		int fps		 = (int)cap.get(CV_CAP_PROP_FPS);
+		int numFrame = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
 
-			//CV_FOURCC('I', 'Y', 'U', 'V')
-			VideoWriter outputWriter(filename, CV_FOURCC('X', 'V', 'I', 'D'), fps, sizeFrame, true);
+		int w=0, h=0;
+		if (width != 0 && height != 0)
+		{
+			w = width;
+			h = height;
+		}
+		else
+		{
+			w = (int)cap.get(CV_CAP_PROP_FRAME_WIDTH);
+			h = (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+		}
 
-			for (int j = listFrameIndex[lastIndex]; j < listFrameIndex[i]; j++)
+		int fourcc	 = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
+
+		//	char EXT[] = { (char)(fourcc & 0XFF), (char)((fourcc & 0XFF00) >> 8), (char)((fourcc & 0XFF0000) >> 16), (char)((fourcc & 0XFF000000) >> 24), 0 };
+		//	cout << "Input codec type: " << EXT << endl;
+
+		Size sizeFrame(w, h);
+		int size[] = { w, h };
+
+		cout << "Number of frames: " << numFrame << endl;
+
+		int lastIndex = 0;
+		int realIndex = 1;
+		int numKeyframe = (int)listFrameIndex.size();
+		for (int i = 1; i < numKeyframe; i+=2)
+		{
+			if (abs(listFrameIndex[i] - listFrameIndex[lastIndex]) >= fps)
 			{
-				cap.read(tempFrame);
+				//Init values
+				Mat tempFrame;
+				int numCount = 0;
 
-				if (tempFrame.empty())
-					continue;
+				//Video writer
+				char *buffer = new char[255];
+				string shotID	   = _itoa(realIndex, buffer, 10);
+				string shotStartID = _itoa(listFrameIndex[lastIndex], buffer, 10);
+				string filename    = foldername + "/shot_" + shotID + "_" + shotStartID + ".avi";
 
-				Mat resizedFrame;
-				resize(tempFrame, resizedFrame, sizeFrame);
+				cout << "shot_" + shotID + ".avi" << endl;
 
-				outputWriter.write(resizedFrame);
+				//CV_FOURCC('I', 'Y', 'U', 'V')
+				VideoWriter outputWriter(filename, CV_FOURCC('X', 'V', 'I', 'D'), fps, sizeFrame, true);
 
-				numCount++;
+				for (int j = listFrameIndex[lastIndex]; j < listFrameIndex[i]; j++)
+				{
+					cap.read(tempFrame);
 
-				cout << j << endl;
+					if (tempFrame.empty())
+						continue;
+
+					Mat resizedFrame;
+					resize(tempFrame, resizedFrame, sizeFrame);
+
+					outputWriter.write(resizedFrame);
+
+					numCount++;
+
+					cout << j << endl;
+				}
+
+				lastIndex = i+1;
+
+				realIndex++;
+
+				cout << "done" << endl;
 			}
 
-			lastIndex = i;
-
-			cout << "done" << endl;
 		}
 	}
+
 }
 
 //Extract key-frame using moments of YCbCr color space
@@ -340,7 +357,11 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 	vector<float> _listDistance;
 	KeyFrameDescriptor previousDescriptor, currentDescriptor;
 
-	//Extract Color Structure Descriptor and compute distance to choose candidate key-frames
+	clock_t t;
+
+	t = clock();
+
+	//Extract MPEG-7 feature Descriptor and compute distance to choose candidate key-frames
 	_listDistance.resize(numFrame - 1);
 	for (int i = 0; i < numFrame; i++)
 	{
@@ -369,8 +390,12 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 	}
 	previousDescriptor.DeleteDescriptor();
 
+	t = clock() - t;
+
+	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to complete the task" << endl;
+
 //	vector<int> listHighCurvaturePoint;
-	float angleMax = 90;
+	float angleMax = 100; //60;
 	int dMax = 3;
 	int dMin = 1;
 	keyFrames = CalcCurvatureAnglePoint(_listDistance, angleMax, dMin, dMax);
@@ -378,12 +403,18 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 	return keyFrames;
 }
 
-void ExtractAndSaveKeyFrame(string videoName)
+void ExtractAndSaveKeyFrame(string videoName, string categoryName="")
 {
 	//Extract key frames from a list of shots
-	string filepath = "Data/Video shots/" + videoName + "/";
-	string destPath = "Data/Key frames/" + videoName + "/";
+	string filepath = "Data/Video shots/" + categoryName + "/" + videoName + "/";
+	string destPath = "Data/Key frames/" + categoryName + "/" + videoName + "/";
 	vector<string> listFileName = ReadFileList(filepath);
+
+	if ( !CreateDirectoryA(destPath.c_str(), NULL) && ERROR_ALREADY_EXISTS != GetLastError())
+	{
+		cout << "Cannot create folder" << endl;
+		return;
+	}
 
 	int j = 0;
 	int i = 0;
@@ -391,6 +422,7 @@ void ExtractAndSaveKeyFrame(string videoName)
 	int numFrame = 0;
 	int count = 0;
 
+	//omp_set_num_threads(2);
 //	#pragma omp parallel shared(n) private(i,j,numFrame,count)
 	{
 //		#pragma omp for

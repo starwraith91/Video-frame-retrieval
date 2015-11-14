@@ -27,6 +27,6 @@ vector<int> KeyframeMomentExtractor(VideoCapture cap);
 //Extract key-frame using curvature point detection algorithm
 vector<int> KeyframeCurvatureExtractor(VideoCapture cap);
 
-void ExtractAndSaveKeyFrame(string videoName);
+void ExtractAndSaveKeyFrame(string videoName,string categoryName);
 
 #endif

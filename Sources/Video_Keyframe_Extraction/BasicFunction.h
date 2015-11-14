@@ -157,10 +157,9 @@ void Shuffle(T *arr, size_t n)
 	if (n > 1)
 	{
 		size_t i;
-		srand(time(NULL));
-		for (i = 0; i < n - 1; i++)
+		for (i = n-1; i>0; i--)
 		{
-			size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+			size_t j = rand() % i;
 			T t = arr[j];
 			arr[j] = arr[i];
 			arr[i] = t;

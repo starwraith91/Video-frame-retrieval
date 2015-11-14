@@ -1,4 +1,4 @@
-// Video_Keyframe_Extraction.cpp : Defines the entry point for the console application.
+﻿// Video_Keyframe_Extraction.cpp : Defines the entry point for the console application.
 //
 
 #include "stdafx.h"
@@ -39,38 +39,43 @@ void VideoSegmentation(string path,string result,int level,int numFrame,float pe
 	cap.release();
 }
 
-void VideoShotExtraction(string videoName,string nameExtension,int width=0,int height=0)
+void VideoShotExtraction(string videoName, string nameExtension, string categoryName="", int width = 0, int height = 0)
 {
 	//Run video summarization code
-	string path = "Data/Raws/" + videoName + nameExtension;
+	string path = "Data/Raws/" + categoryName + "/";
+	if (CreateDirectoryA(path.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	{
+		string result = "Data/Video shots/" + categoryName + "/"  + videoName + "_shot.avi";
 
-	string result = "Data/Video shots/" + videoName + "_shot.avi";
-
-	VideoSegmentation(path, result, 1, -1, 1.0f, width, height);
+		VideoSegmentation(path + videoName + nameExtension, result, 1, -1, 1.0f, width, height);
+	}
 
 	//Run video shot extraction code
-	VideoCapture cap(path);
+	VideoCapture cap(path + videoName + nameExtension);
+	string shotDir = "Data/Video shots/" + categoryName + "/";
+	if (CreateDirectoryA(shotDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	{
+		string shotpath = shotDir + videoName + "_shot.avi.txt";
 
-	string shotpath = "Data/Video shots/" + videoName + "_shot.avi.txt";
-	
-	VideoShotExtractor(cap, videoName, shotpath, width, height);
+		VideoShotExtractor(cap, categoryName + "/" + videoName, shotpath, width, height);
+	}
 }
 
-void CreateDatabase(int database_type)
+void CreateDatabase(string categoryName, int database_type)
 {
 	if (database_type == 1)
 	{
-		//CreateVocaburary(bowDE, dictionarySize);
-		CreateBOWTrainingSet(dictionarySize, detector, bowDE);
+		CreateBOWTrainingSet(categoryName, dictionarySize, detector, bowDE);
 	}
 	else
 	{
-		CreateMPEGTrainingSet();
+		CreateMPEGTrainingSet(categoryName);
 	}
 }
 
-void RandomizeFrameTest(string rawVideoPath, string videoName, int numFrame)
+void RandomizeFrameTest(string rawVideoPath, string categoryName, string videoName, int numFrame)
 {
+	srand(time(NULL));
 	vector<int> listIndex;
 
 	VideoCapture cap(rawVideoPath);
@@ -91,7 +96,7 @@ void RandomizeFrameTest(string rawVideoPath, string videoName, int numFrame)
 		//Write this test image out to the folder
 		char *buffer = new char[255];
 		_itoa_s(listIndex[i], buffer, 255, 10);
-		string testFileName = "Data/Test_images/" + videoName + "/" + videoName + "_ID_" + buffer + ".png";
+		string testFileName = "Data/Test_images/" + categoryName + "/" + videoName + "/" + videoName + "_ID_" + buffer + ".png";
 
 		//Write image to test data
 		imwrite(testFileName, testImage);
@@ -99,27 +104,35 @@ void RandomizeFrameTest(string rawVideoPath, string videoName, int numFrame)
 	}
 }
 
-void CreateTestSet(int numTestFile)
+void CreateTestSet(int numTestFile, string categoryName = "")
 {
-	vector<string> _listRawName = ReadFileList("Data/Raws/");
+	string pathRaw = "Data/Raws/" + categoryName + "/";
+	vector<string> _listRawName = ReadFileList(pathRaw.c_str());
 
-	int numFilePerVideo = numTestFile / _listRawName.size();
-	for (int i = 0; i < _listRawName.size(); i++)
+	string pathTest = "Data/Test_images/" + categoryName + "/";
+	if (CreateDirectoryA(pathTest.c_str() , NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		string rawVideoPath = "Data/Raws/" + _listRawName[i];
-		string videoName = _listRawName[i].substr(0, _listRawName[i].size() - 4);
-		string testVideoPath = "Data/Test_images/" + videoName;
+		int numFilePerVideo = numTestFile / _listRawName.size();
+		for (int i = 0; i < _listRawName.size(); i++)
+		{
+			string rawVideoPath = pathRaw + _listRawName[i];
+			string videoName = _listRawName[i].substr(0, _listRawName[i].size() - 4);
+			string testVideoPath = pathTest + videoName;
 
-		cout << "Extract test frame from video " << videoName << endl;
-		if (CreateDirectoryA(testVideoPath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
-		{
-			RandomizeFrameTest(rawVideoPath, videoName, numFilePerVideo);
+			cout << "Extract test frame from video " << videoName << endl;
+			if (CreateDirectoryA(testVideoPath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+			{
+				RandomizeFrameTest(rawVideoPath, categoryName, videoName, numFilePerVideo);
+			}
+			else
+			{
+				cout << "Cannot find and create " << testVideoPath << " directory" << endl;
+			}
 		}
-		else
-		{
-			cout << "Cannot find and create " << rawVideoPath << " directory" << endl;
-			break;
-		}
+	}
+	else
+	{
+		cout << "Something is wrong..." << endl;
 	}
 }
 
@@ -129,25 +142,27 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	t = clock();
 
-	string videoName = "Shinkenger_vs_Goseiger";
+	string videoName = "Vacation";
 
-	//string nameExtension = ".mkv";
+	string nameExtension = ".mp4";
 
-	//VideoShotExtraction(videoName, nameExtension, 640, 264);
+	string categoryName = "RipDVD";
 
-	ExtractAndSaveKeyFrame(videoName);
+	VideoShotExtraction(videoName, nameExtension, categoryName);
 
-	//CreateTestSet(1000);
+	ExtractAndSaveKeyFrame(videoName, categoryName);
 
-	int database_type = 0;
+	//CreateTestSet(1000, categoryName);
 
-	CreateDatabase(database_type);
+	//int database_type = 1;
 
-	TestDatabase(database_type);
+	//CreateDatabase(categoryName, database_type);
+
+	//TestDatabase(categoryName, database_type);
 
 	t = clock() - t;
 
-	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to complete the task" << endl;
+	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to complete all tasks" << endl;
 
 	return 0;
 }

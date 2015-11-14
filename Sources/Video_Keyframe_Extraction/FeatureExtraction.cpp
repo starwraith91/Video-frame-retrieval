@@ -36,7 +36,7 @@ Mat ExtractSIFTDescriptor(string path)
 }
 
 int numClassVideo = 0;
-void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
+void CreateVocaburary(string categoryName, BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 {
 	//---dictionary size = number of cluster's centroids
 	TermCriteria tc(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 10, 0.01);
@@ -44,7 +44,7 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 	int flags = KMEANS_PP_CENTERS;
 
 	//Get a large set of images to be training set
-	string trainpath = "Data/Key frames/";
+	string trainpath = "Data/Key frames/" + categoryName + "/";
 	vector<string> _listClass = ReadFileList(trainpath);
 	numClassVideo = _listClass.size();
 
@@ -56,7 +56,7 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 		vector<string> _listStringName = ReadFileList(path.c_str());
 		Shuffle(&_listStringName[0], _listStringName.size());
 
-		int numFileName = 150;
+		int numFileName = 50;
 		for (int j = 0; j < numFileName; j++)
 		{
 			string filename = path + _listStringName[j];
@@ -76,10 +76,10 @@ void CreateVocaburary(BOWImgDescriptorExtractor &bowDE, int dictionarySize)
 			}
 		}	
 	}
-	ClusterFeature(bowTrainer, bowDE, "");
+	ClusterFeature(categoryName, bowTrainer, bowDE, "");
 }
 
-void ClusterFeature(BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowDE, string dictionaryName)
+void ClusterFeature(string categoryName, BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowDE, string dictionaryName)
 {
 	vector<Mat> descriptors = bowTrainer.getDescriptors();
 	int count = 0;
@@ -91,7 +91,7 @@ void ClusterFeature(BOWKMeansTrainer bowTrainer, BOWImgDescriptorExtractor &bowD
 	Mat dictionary = bowTrainer.cluster();
 	bowDE.setVocabulary(dictionary);
 
-	string filename = "Data/BOW_dictionary.xml";
+	string filename = "Data/" + categoryName + "_BOW_dictionary.xml";
 	FileStorage fs(filename, FileStorage::WRITE);
 	fs << "dictionary" << dictionary;
 }
@@ -109,18 +109,26 @@ Mat LoadBOWDictionaryFromFile(string filename)
 	return dictionary;
 }
 
-void CreateBOWTrainingSet(int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE)
+void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE)
 {
 	//Get a large set of image to be training set
-	string trainpath = "Data/Key frames/";
+	string trainpath = "Data/Key frames/" + categoryName + "/";
 
 	vector<string> _listClass = ReadFileList(trainpath);
 	numClassVideo = _listClass.size();
 
 	Mat bowDescriptor;
 
-	string vocabularyPath = "Data/BOW_dictionary.xml";
-	bowDE.setVocabulary(LoadBOWDictionaryFromFile(vocabularyPath));
+	string vocabularyPath = "Data/" + categoryName + "_BOW_dictionary.xml";
+	Mat dictionary = LoadBOWDictionaryFromFile(vocabularyPath);
+	if (dictionary.empty())
+	{
+		CreateVocaburary(categoryName, bowDE, dictionarySize);
+	}
+	else
+	{
+		bowDE.setVocabulary(dictionary);
+	}	
 
 	Mat trainingData(0, dictionarySize, CV_32FC1);
 	Mat trainingLabel(0, 1, CV_32SC1);
@@ -162,10 +170,18 @@ void CreateBOWTrainingSet(int dictionarySize, SiftFeatureDetector detector, BOWI
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
 
 		//Write training data to file for future use	
-		string pathTrainData = "Data/BOW_data/" + _listClass[classIndex] + ".xml";
-		FileStorage fs(pathTrainData, FileStorage::WRITE);
-		fs << "data_matrix" << trainingData;
-		fs << "data_label" << trainingLabel;
+		string pathTrainData = "Data/BOW_data/" + categoryName + "/";
+		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+		{
+			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
+			fs << "data_matrix" << trainingData;
+			fs << "data_label" << trainingLabel;
+		}
+		else
+		{
+			cout << "Cannot find and create " << pathTrainData << " directory" << endl;
+		}
+
 
 		trainingData.release();
 
@@ -183,10 +199,10 @@ void CreateBOWTrainingSet(int dictionarySize, SiftFeatureDetector detector, BOWI
 	//cout << "Finish creating ANN training model"<< endl;
 }
 
-void CreateMPEGTrainingSet()
+void CreateMPEGTrainingSet(string categoryName)
 {
 	//Get a large set of image to be training set
-	string trainpath = "Data/Key frames/";
+	string trainpath = "Data/Key frames/" + categoryName + "/";
 
 	vector<string> _listClass = ReadFileList(trainpath);
 	numClassVideo = _listClass.size();
@@ -220,10 +236,17 @@ void CreateMPEGTrainingSet()
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
 
 		//Write training data to file for future use	
-		string pathTrainData = "Data/BOW_data/" + _listClass[classIndex] + ".xml";
-		FileStorage fs(pathTrainData, FileStorage::WRITE);
-		fs << "data_matrix" << trainingData;
-		fs << "data_label" << trainingLabel;
+		string pathTrainData = "Data/BOW_data/" + categoryName + "/";
+		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+		{
+			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
+			fs << "data_matrix" << trainingData;
+			fs << "data_label" << trainingLabel;
+		}
+		else
+		{
+			cout << "Cannot find and create " << pathTrainData << " directory" << endl;
+		}
 
 		trainingData.release();
 
