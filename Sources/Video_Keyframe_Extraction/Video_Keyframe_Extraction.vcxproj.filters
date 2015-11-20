@@ -30,9 +30,6 @@
     <ClInclude Include="KeyframeExtraction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MachineLearning.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="BasicFunction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -51,9 +48,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="KeyframeExtraction.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MachineLearning.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BasicFunction.cpp">

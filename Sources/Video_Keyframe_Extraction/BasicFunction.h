@@ -14,6 +14,8 @@
 #include <map>
 #include <string>
 #include <time.h>
+#include <set>
+#include <algorithm>
 #include <Windows.h>
 
 //OpenCV header
@@ -29,6 +31,7 @@
 #include "Feature.h"
 
 #define _USE_MATH_DEFINES 
+#define ROUND(a) (int)(a+0.5)
 #include <math.h>
 #include <omp.h>
 
@@ -44,9 +47,21 @@ void ShowDict(map<string, int> _dict);
 
 int IdentifyShotFromKeyFrame(string filename);
 
+int IdentifyStartIDFromKeyFrame(string filename);
+
+int IdentifyKeyIDFromKeyFrame(string filename);
+
+string GetFileNameExtension(string filename);
+
+void DeleteAllFiles(string directoryPath);
+
+//----MATHEMATICAL_FUNCTION----//
+
 void NormalizeFeatureVector(vector<float> &listValue);
 
 float GetMagnitude(vector<float> &listValue);
+
+//----TEMPLATE_FUNCTION----//
 
 template<class T>
 T GetMedian(vector<T> listValue)
@@ -135,17 +150,66 @@ float GetKurtosis(vector<T> listValue, float mean)
 }
 
 template <class T>
-void Sort(vector<T> &listValue)
+void Sort(vector<T> &listValue, bool ascending = false)
 {
 	for (int i = 0; i < (int)listValue.size() - 1; i++)
 	{
 		for (int j = i; j < (int)listValue.size(); j++)
 		{
-			if (listValue[i] < listValue[j])
+			if (ascending)
 			{
-				T temp = listValue[i];
-				listValue[i] = listValue[j];
-				listValue[j] = temp;
+				if (listValue[i] < listValue[j])
+				{
+					T temp = listValue[i];
+					listValue[i] = listValue[j];
+					listValue[j] = temp;
+				}
+			}
+			else
+			{
+				if (listValue[i] > listValue[j])
+				{
+					T temp = listValue[i];
+					listValue[i] = listValue[j];
+					listValue[j] = temp;
+				}
+			}
+		}
+	}
+}
+
+template <class T, class X>
+void Sort(vector<T> &listValue, vector<X> &listSubValue, bool ascending=false)
+{
+	for (int i = 0; i < (int)listValue.size() - 1; i++)
+	{
+		for (int j = i; j < (int)listValue.size(); j++)
+		{
+			if (!ascending)
+			{
+				if (listValue[i] < listValue[j])
+				{
+					T temp = listValue[i];
+					listValue[i] = listValue[j];
+					listValue[j] = temp;
+
+					X tempSub = listSubValue[i];
+					listSubValue[i] = listSubValue[j];
+					listSubValue[j] = tempSub;
+				}
+			}
+			else
+			{
+				if (listValue[i] > listValue[j])
+				{
+					T temp = listValue[i];
+					listValue[i] = listValue[j];
+					listValue[j] = temp;
+
+					X tempSub = listSubValue[i];
+					listSubValue[i] = listSubValue[j];
+					listSubValue[j] = tempSub;
+				}
 			}
 		}
 	}
@@ -177,15 +241,13 @@ vector<float> ToVector(Mat mat);
 
 float CalcVectorMagnitude(Mat mat);
 
-float CalcEuclidianDistance(Mat a, Mat b);
+float CalcEuclideanDistance(Mat a, Mat b);
 
-float CalcDistanceFromSet(Mat a, Mat featureMatrix,int &index);
+float CalcDistanceFromSet(Mat a, Mat featureMatrix);
 
 float CalcEntropy(float value,float total);
 
 //Extract a single frame from a video
 Mat ExtractFrameFromVideo(VideoCapture cap, int frameID);
-
-Mat GetColorStructureDescriptor(Mat image, int featureSize);
 
 #endif

@@ -5,13 +5,6 @@
 
 #include "BasicFunction.h"
 
-struct KeyFrame
-{
-	int frameID;
-	double distCurrentNext;
-	double distLastNext;
-};
-
 struct KeyFrameDescriptor
 {
 	ColorStructureDescriptor *colorDesc;
@@ -69,18 +62,7 @@ void CreateMPEGTrainingSet(string categoryName);
 
 bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label);
 
-//Extract color moment descriptor
-vector<float> GetMomentDescriptor(Mat image);
-
 //Extract color, edge and texture hist
 KeyFrameDescriptor CalcMPEGDescriptor(Mat img);
-
-//---------BASIC IMAGE PROCESSING-----------//
-
-Mat EdgeDetection(Mat img);
-
-int CountEdgePixel(Mat imgEdge);
-
-double CalculateEdgeMatchingRate(Mat imgEdge1, Mat imgEdge2);
 
 #endif

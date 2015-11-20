@@ -10,6 +10,8 @@ void ShowDict(map<string, int> _dict)
 	}
 }
 
+bool myfunction(string i, string j) { return (i<j); }
+
 vector<string> ReadFileList(string path)
 {
 	DIR *dir;
@@ -25,8 +27,6 @@ vector<string> ReadFileList(string path)
 			{
 				string tempString(pName);
 				_listStringName.push_back(tempString);
-
-				//printf("%s\n", ent->d_name);
 			}
 		}
 		closedir(dir);
@@ -37,6 +37,8 @@ vector<string> ReadFileList(string path)
 		cout << "Cannot open directory" << endl;
 	}
 
+	//sort(_listStringName.begin(), _listStringName.end(), myfunction);
+
 	return _listStringName;
 }
 
@@ -46,17 +48,17 @@ int IdentifyShotFromKeyFrame(string filename)
 
 	int lc_right = 0, lc_left = 0;
 	int countLC = 0;
-	for (int characterIndex = filename.size() - 1; characterIndex >= 0; characterIndex--)
+	for (int characterIndex = 0; characterIndex < filename.size(); characterIndex++)
 	{
 		if (filename[characterIndex] == '_')
 		{
 			if (countLC == 0)
 			{
-				lc_right = characterIndex;
+				lc_left = characterIndex + 1;
 			}
 			else
 			{
-				lc_left = characterIndex + 1;
+				lc_right = characterIndex;
 				string tempStr = filename.substr(lc_left, lc_right - lc_left);
 				shotID = atoi(tempStr.c_str());
 
@@ -69,26 +71,87 @@ int IdentifyShotFromKeyFrame(string filename)
 	return shotID;
 }
 
-Mat GetColorStructureDescriptor(Mat image, int featureSize)
+int IdentifyStartIDFromKeyFrame(string filename)
 {
-	//Initialize feature extractor
-	Feature featureExtractor;
+	int shotID = -1;
 
-	//Import image to a new structure
-	Frame *frame = new Frame(image);
-
-	//Extract color structure descriptor
-	ColorStructureDescriptor *descriptor = featureExtractor.getColorStructureD(frame, featureSize);
-
-	Mat feature(1, featureSize, CV_32FC1);
-	for (int i = 0; i < featureSize; i++)
+	int lc_right = 0, lc_left = 0;
+	int countLC = 0;
+	for (int characterIndex = 0; characterIndex < filename.size(); characterIndex++)
 	{
-		feature.at<float>(0, i) = (float)descriptor->GetElement(i);
+		if (filename[characterIndex] == '_')
+		{
+			if (countLC == 1)
+			{
+				lc_left = characterIndex + 1;
+			}
+			else if (countLC == 2)
+			{
+				lc_right = characterIndex;
+				string tempStr = filename.substr(lc_left, lc_right - lc_left);
+				shotID = atoi(tempStr.c_str());
+
+				break;
+			}
+			countLC++;
+		}
 	}
 
-	delete frame;
+	return shotID;
+}
 
-	return feature;
+int IdentifyKeyIDFromKeyFrame(string filename)
+{
+	int shotID = -1;
+
+	int lc_right = 0, lc_left = 0;
+	int countLC = 0;
+	for (int characterIndex = 0; characterIndex < filename.size(); characterIndex++)
+	{
+		if (filename[characterIndex] == '_')
+		{
+			if (countLC == 2)
+				lc_left = characterIndex + 1;
+			countLC++;
+		}
+		else if (filename[characterIndex] == '.')
+		{
+			lc_right = characterIndex;
+			string tempStr = filename.substr(lc_left, lc_right - lc_left);
+			shotID = atoi(tempStr.c_str());
+
+			break;
+		}
+	}
+
+	return shotID;
+}
+
+string GetFileNameExtension(string filename)
+{
+	int count = 1;
+	for (int i = filename.size()-1; i >= 0; i--)
+	{
+		if (filename[i] == '.')
+		{
+			return filename.substr(i,count);
+		}
+		else
+		{
+			count++;
+		}
+	}
+	return NULL;
+}
+
+void DeleteAllFiles(string directoryPath)
+{
+	vector<string> listFiles = ReadFileList(directoryPath);
+	for (int i = 0; i < listFiles.size(); i++)
+	{
+		string filepath = directoryPath + "/" + listFiles[i];
+		remove(filepath.c_str());
+	}
 }
 
 float GetMagnitude(vector<float> &listValue)
@@ -101,7 +164,6 @@ float GetMagnitude(vector<float> &listValue)
 	}
 	return sqrt(sum);
 }
-
 
 void NormalizeFeatureVector(vector<float> &listValue)
 {
@@ -123,7 +185,7 @@ float CalcVectorMagnitude(Mat mat)
 	return sqrt(sum);
 }
 
-float CalcEuclidianDistance(Mat a, Mat b)
+float CalcEuclideanDistance(Mat a, Mat b)
 {
 	float totalValue = 0;
 	for (int i = 0; i < a.cols; i++)
@@ -139,16 +201,15 @@ float CalcEuclidianDistance(Mat a, Mat b)
 	return totalValue;
 }
 
-float CalcDistanceFromSet(Mat a, Mat featureMatrix,int &index)
+float CalcDistanceFromSet(Mat a, Mat featureMatrix)
 {
 	float minDistance = -1;
 	for (int i = 0; i < featureMatrix.rows; i++)
 	{
 		Mat b = featureMatrix.row(i);
-		float distance = CalcEuclidianDistance(a, b);
+		float distance = CalcEuclideanDistance(a, b);
 		if (minDistance == -1 || minDistance > distance)
 		{
-			index = i;
 			minDistance = distance;
 		}
 	}

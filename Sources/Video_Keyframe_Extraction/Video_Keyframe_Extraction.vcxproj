@@ -85,6 +85,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>opencv2/core;opencv2/highgui;opencv2/imgproc;opencv2/ml;opencv2/features2d;opencv2/nonfree;opencv2/flann;opencv2/objdetect;opencv2/dll;MPEG7</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,7 +105,6 @@
     <ClInclude Include="BasicFunction.h" />
     <ClInclude Include="FeatureExtraction.h" />
     <ClInclude Include="KeyframeExtraction.h" />
-    <ClInclude Include="MachineLearning.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="VideoShotRetrieval.h" />
@@ -113,7 +113,6 @@
     <ClCompile Include="BasicFunction.cpp" />
     <ClCompile Include="FeatureExtraction.cpp" />
     <ClCompile Include="KeyframeExtraction.cpp" />
-    <ClCompile Include="MachineLearning.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

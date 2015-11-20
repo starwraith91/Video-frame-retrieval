@@ -8,6 +8,7 @@
 #include "targetver.h"
 
 #include <stdio.h>
+#include <filesystem>
 #include <tchar.h>
 //#include <atlstr.h>
 

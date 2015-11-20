@@ -2,18 +2,6 @@
 #include "stdafx.h"
 #include "KeyframeExtraction.h"
 
-double GetSDOfDistance(vector<KeyFrame> listKeyFrame, double mean)
-{
-	double sum = 0;
-	int n = (int)listKeyFrame.size();
-	for (int i = 0; i < n; i++)
-	{
-		double value = listKeyFrame[i].distCurrentNext;
-		sum += (value - mean)*(value - mean);
-	}
-	return sqrt(sum);
-}
-
 bool IsHighCurvaturePoint(vector<float> listAngle,int windowSize,int index)
 {
 	int n = listAngle.size();
@@ -135,39 +123,6 @@ vector<int> CalcCurvatureAnglePoint(vector<float> listDistance, float angleMax, 
 	return keyframeID;
 }
 
-//Remove redundant keyframe
-void RemoveRedundantKeyframes(VideoCapture cap, vector<int> &listKeyframes)
-{
-	Mat prevEdge, currentEdge;
-
-	cout << "Removed redundant frames ";
-
-	//Calculate edge matching rates
-	int numKeyframe = (int)listKeyframes.size();
-	for (int i = 0; i < numKeyframe; i++)
-	{
-		Mat frame = ExtractFrameFromVideo(cap, listKeyframes[i]);
-		if (i == 0)
-		{
-			prevEdge = EdgeDetection(frame);
-		}
-		else
-		{
-			currentEdge = EdgeDetection(frame);
-
-			double matchingRate = CalculateEdgeMatchingRate(prevEdge, currentEdge);
-			if (matchingRate > 0.6f)
-			{
-				cout << listKeyframes[i] << " ";
-				listKeyframes[i] = -1;
-			}
-
-			prevEdge = currentEdge;
-		}
-	}
-	cout << endl;
-}
-
 void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotpath,int width,int height)
 {
 	ifstream in(shotpath);
@@ -213,13 +168,12 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 		int lastIndex = 0;
 		int realIndex = 1;
 		int numKeyframe = (int)listFrameIndex.size();
-		for (int i = 1; i < numKeyframe; i+=2)
+		for (int i = 1; i < numKeyframe; i++)
 		{
 			if (abs(listFrameIndex[i] - listFrameIndex[lastIndex]) >= fps)
 			{
 				//Init values
 				Mat tempFrame;
-				int numCount = 0;
 
 				//Video writer
 				char *buffer = new char[255];
@@ -244,12 +198,10 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 
 					outputWriter.write(resizedFrame);
 
-					numCount++;
-
-					cout << j << endl;
+					//cout << j << endl;
 				}
 
-				lastIndex = i+1;
+				lastIndex = i;
 
 				realIndex++;
 
@@ -259,84 +211,6 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 		}
 	}
 
-}
-
-//Extract key-frame using moments of YCbCr color space
-vector<int> KeyframeMomentExtractor(VideoCapture cap)
-{
-	//Extract all frame from video as a list
-	vector<int> keyFrames;
-
-	int numFrame = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
-
-	if (numFrame <= 2)
-	{
-		keyFrames.push_back(numFrame/2);
-		return keyFrames;
-	}
-
-	//Setup parameter to used for Simple Breakpoint method to decide the key-frames
-	double _totalDistance = 0.0;
-	vector<KeyFrame> _listKeyframeCandidate;
-
-	//Extract Color Structure Descriptor and compute distance to choose candidate key-frames
-	Mat currentDescriptor;
-	Mat previousDescriptor;
-
-	for (int i = 0; i < numFrame; i++)
-	{
-		Mat frameMat,normMat;
-		cap.read(frameMat); 
-		frameMat.convertTo(normMat, CV_32FC3); normMat *= 1.0 / 255.0;
-		cvtColor(normMat, normMat, CV_BGR2YCrCb);
-		if (i == 0)
-		{
-			previousDescriptor = ToMat(GetMomentDescriptor(normMat));
-		}
-		else
-		{
-			currentDescriptor = ToMat(GetMomentDescriptor(normMat));
-
-			double _distance   = CalcEuclidianDistance(previousDescriptor,currentDescriptor);
-
-			KeyFrame candidate;
-			candidate.frameID = i;
-			candidate.distCurrentNext = _distance;
-			_listKeyframeCandidate.push_back(candidate);
-
-			_totalDistance += _distance;
-
-			//Exchange info and free up memory
-			previousDescriptor = currentDescriptor;
-		}
-	}
-
-	//Calculate threshold and pick the key-frames when distance calculated is greater than threshold
-	if (_listKeyframeCandidate.size() != 0)
-	{
-		double _threshold = _totalDistance / (double)_listKeyframeCandidate.size();
-		//double _sd		= GetSDOfDistance(_listKeyframeCandidate, _mean);
-		//double _threshold = _mean + _sd/4; 
-		cout << "Threshold = " << _threshold << endl;
-
-		int numFrame = (int)_listKeyframeCandidate.size();
-		for (int i = 0; i < numFrame; i++)
-		{
-			if (_listKeyframeCandidate[i].distCurrentNext > _threshold)
-			{
-				cout << "Selected frame " << _listKeyframeCandidate[i].frameID << endl;
-				keyFrames.push_back(_listKeyframeCandidate[i].frameID);
-			}
-		}
-
-		if (keyFrames.size() == 0)
-		{
-			keyFrames.push_back(numFrame/2);
-			cout << "No key frames is found. Get first frame. ";
-		}
-	}
-
-	return keyFrames;
 }
 
 //Extract key-frame using curvature point detection algorithm
@@ -392,10 +266,10 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 
 	t = clock() - t;
 
-	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to complete the task" << endl;
+	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to calculate all distances" << endl;
 
 //	vector<int> listHighCurvaturePoint;
-	float angleMax = 100; //60;
+	float angleMax = 90; //60;
 	int dMax = 3;
 	int dMin = 1;
 	keyFrames = CalcCurvatureAnglePoint(_listDistance, angleMax, dMin, dMax);

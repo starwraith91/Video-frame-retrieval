@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "stdafx.h"
 #include "FeatureExtraction.h"
-#include "MachineLearning.h"
 
 Mat ExtractSURFDescriptor(string path)
 {
@@ -91,7 +90,7 @@ void ClusterFeature(string categoryName, BOWKMeansTrainer bowTrainer, BOWImgDesc
 	Mat dictionary = bowTrainer.cluster();
 	bowDE.setVocabulary(dictionary);
 
-	string filename = "Data/" + categoryName + "_BOW_dictionary.xml";
+	string filename = "Data/Training_Data/" + categoryName + "_BOW_dictionary.xml";
 	FileStorage fs(filename, FileStorage::WRITE);
 	fs << "dictionary" << dictionary;
 }
@@ -119,7 +118,7 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 
 	Mat bowDescriptor;
 
-	string vocabularyPath = "Data/" + categoryName + "_BOW_dictionary.xml";
+	string vocabularyPath = "Data/Training_Data/" + categoryName + "_BOW_dictionary.xml";
 	Mat dictionary = LoadBOWDictionaryFromFile(vocabularyPath);
 	if (dictionary.empty())
 	{
@@ -170,7 +169,7 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
 
 		//Write training data to file for future use	
-		string pathTrainData = "Data/BOW_data/" + categoryName + "/";
+		string pathTrainData = "Data/Training_Data/" + categoryName + "/BOW/";
 		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
 			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
@@ -208,7 +207,7 @@ void CreateMPEGTrainingSet(string categoryName)
 	numClassVideo = _listClass.size();
 
 	Mat trainingData(0, 1, CV_32FC1);
-	Mat trainingLabel(0, 1, CV_32SC1);
+	Mat trainingLabel(0, 3, CV_32SC1);
 
 	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
@@ -229,14 +228,20 @@ void CreateMPEGTrainingSet(string categoryName)
 
 			trainingData.push_back(descriptor);
 
-			int shotID = IdentifyShotFromKeyFrame(_listStringName[filenameIndex]);
-			trainingLabel.push_back(shotID);
+			int shotID   = IdentifyShotFromKeyFrame(_listStringName[filenameIndex]);
+			int startID  = IdentifyStartIDFromKeyFrame(_listStringName[filenameIndex]);
+			int keyID	 = IdentifyKeyIDFromKeyFrame(_listStringName[filenameIndex]);
+			Mat tempMat(1, 3, CV_32SC1);
+			tempMat.at<int>(0, 0) = shotID;
+			tempMat.at<int>(0, 1) = startID;
+			tempMat.at<int>(0, 2) = keyID;
+			trainingLabel.push_back(tempMat);
 		}
 
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
 
 		//Write training data to file for future use	
-		string pathTrainData = "Data/BOW_data/" + categoryName + "/";
+		string pathTrainData = "Data/Training_data/" + categoryName + "/MPEG7/";
 		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
 			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
@@ -329,56 +334,6 @@ bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label)
 
 //---------BASIC IMAGE PROCESSING-----------//
 
-Mat EdgeDetection(Mat img)
-{
-	Mat edgeImg; 
-	cvtColor(img, edgeImg, CV_BGR2GRAY);
-	Sobel(edgeImg, edgeImg, CV_8U, 1, 1);
-
-	return edgeImg;
-}
-
-int CountEdgePixel(Mat imgEdge)
-{
-	int count = 0;
-	int imageSize = imgEdge.rows * imgEdge.cols;
-	for (int i = 0; i < imageSize; i++)
-	{
-		if (imgEdge.at<uchar>(i) > 0)
-		{
-			count++;
-		}
-	}
-
-	return count;
-}
-
-double CalculateEdgeMatchingRate(Mat imgEdge1, Mat imgEdge2)
-{
-	double matchingRate = 0;
-
-	//Count number of matched edge pixel
-	int countMatchPixel = 0;
-	int imageSize = imgEdge1.rows * imgEdge1.cols;
-	for (int i = 0; i < imageSize; i++)
-	{
-		uchar pixel1 = imgEdge1.at<uchar>(i);
-		uchar pixel2 = imgEdge2.at<uchar>(i);
-		if (pixel1 == pixel2)
-		{
-			countMatchPixel++;
-		}
-	}
-
-	//int edgePixel = MAX( CountEdgePixel(imgEdge1) , CountEdgePixel(imgEdge2) );
-	//if (edgePixel > 0)
-	//{
-		matchingRate = (double)countMatchPixel / (double)imageSize;
-	//}
-
-	return matchingRate;
-}
-
 KeyFrameDescriptor CalcMPEGDescriptor(Mat img)
 {
 	KeyFrameDescriptor descriptor;
@@ -391,71 +346,13 @@ KeyFrameDescriptor CalcMPEGDescriptor(Mat img)
 	descriptor.edgeDesc = featureExtractor->getEdgeHistogramD(frame);
 
 	Mat grayImg(img.rows, img.cols, CV_8U);
-	Frame *grayFrame = new Frame(img.cols, img.rows);
 	cvtColor(img, grayImg, CV_BGR2GRAY);
-	grayFrame->setGray(grayImg);
-	descriptor.textureDesc = featureExtractor->getHomogeneousTextureD(grayFrame);
-	delete grayFrame;
+	frame->setGray(grayImg);
+	descriptor.textureDesc = featureExtractor->getHomogeneousTextureD(frame);
 
 	delete frame;
 
 	delete featureExtractor;
 
 	return descriptor;
-}
-
-vector<float> GetMomentDescriptor(Mat image)
-{
-	Mat normImage;
-	image.convertTo(normImage, CV_32FC3);
-
-	vector<float> featureVector;
-
-	//Get a list of Y values from all pixels
-	vector<float> listYValues, listCrValues, listCbValues;
-	for (int i = 0; i < normImage.rows; i++)
-	{
-		for (int j = 0; j < normImage.cols; j++)
-		{
-			Vec3f value = normImage.at<Vec3f>(i, j);
-			listYValues.push_back(value.val[0]);
-			listCrValues.push_back(value.val[1]);
-			listCbValues.push_back(value.val[2]);
-			//			cout << value.val[0] << "	" << value.val[1] << "	" << value.val[2] << endl
-		}
-	}
-
-	float meanY = GetMean<float>(listYValues);
-	float sdY = GetStandardDeviation<float>(listYValues, meanY);
-	float skewY = GetSkewness<float>(listYValues, meanY);
-	//	float kurtosisY = GetKurtosis<float>(listYValues, meanY);
-
-	//	float meanCr	 = GetMean<float>(listCrValues);
-	//	float sdCr		 = GetStandardDeviation<float>(listCrValues, meanCr);
-	//	float skewCr	 = GetSkewness<float>(listCrValues, meanCr);
-	//	float kurtosisCr = GetKurtosis<float>(listCrValues, meanCr);
-
-	//	float meanCb	 = GetMean<float>(listCbValues);
-	//	float sdCb		 = GetStandardDeviation<float>(listCbValues, meanCb);
-	//	float skewCb	 = GetSkewness<float>(listCbValues, meanCb);
-	//	float kurtosisCb = GetKurtosis<float>(listCbValues, meanCb);
-
-	featureVector.push_back(meanY);
-	featureVector.push_back(sdY);
-	featureVector.push_back(skewY);
-	//	featureVector.push_back(kurtosisY);
-
-	//	featureVector.push_back(meanCb);
-	//	featureVector.push_back(sdCb);
-	//	featureVector.push_back(skewCb);
-	//	featureVector.push_back(kurtosisCb);
-
-	//	featureVector.push_back(meanCr);
-	//	featureVector.push_back(sdCr);
-	//	featureVector.push_back(skewCr);
-	//	featureVector.push_back(kurtosisCr);
-
-	NormalizeFeatureVector(featureVector);
-
-	return featureVector;
 }
