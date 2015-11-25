@@ -210,7 +210,7 @@ float CalcDistanceFromSet(Mat a, Mat featureMatrix)
 		float distance = CalcEuclideanDistance(a, b);
 		if (minDistance == -1 || minDistance > distance)
 		{
-			minDistance = distance;
+			minDistance = distance; 
 		}
 	}
 	return minDistance;

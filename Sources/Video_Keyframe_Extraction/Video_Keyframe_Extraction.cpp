@@ -127,9 +127,10 @@ void VideoShotExtraction(string videoName, string categoryName="", int width = 0
 {
 	//Run video summarization code
 	string path = "Data/Raws/" + categoryName + "/";
+	string folderName = GetName(videoName);
 	if (CreateDirectoryA(path.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		string result = "Data/Video shots/" + categoryName + "/"  + videoName + "_shot.avi";
+		string result = "Data/Video shots/" + categoryName + "/" + folderName + "_shot.avi";
 
 		VideoSegmentation(path + videoName, result, 1, -1, 1.0f, width, height);
 	}
@@ -139,7 +140,6 @@ void VideoShotExtraction(string videoName, string categoryName="", int width = 0
 	string shotDir = "Data/Video shots/" + categoryName + "/";
 	if (CreateDirectoryA(shotDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		string folderName = GetName(videoName);
 		string shotpath = shotDir + folderName + "_shot.avi.txt";
 		VideoShotExtractor(cap, categoryName + "/" + folderName, shotpath, width, height);
 	}
@@ -164,56 +164,52 @@ void CreateDatabase(string categoryName, int database_type)
 void RandomizeFrameTest(string rawVideoPath, string categoryName, string videoName, int numFrame)
 {
 	srand(time(NULL));
-	vector<int> listIndex;
-
-	VideoCapture cap(rawVideoPath);
-	int numCapFrame = cap.get(CV_CAP_PROP_FRAME_COUNT);
-	for (int i = 0; i < numCapFrame; i++)
-	{
-		listIndex.push_back(i);
-	}
-	Shuffle(&listIndex[0], numCapFrame);
+	vector<string> _listShot = ReadFileList(rawVideoPath+"/");
+	Shuffle(&_listShot[0], _listShot.size());
 
 	for (int i = 0; i < numFrame; i++)
 	{
+		VideoCapture cap(rawVideoPath + "/" + _listShot[i]);
+		int numFrame = cap.get(CV_CAP_PROP_FRAME_COUNT);
+		double randomIndex = (double)(rand() % numFrame);
+
 		//Seek to frame with random ID
-		cap.set(CV_CAP_PROP_POS_FRAMES, (double)listIndex[i]);
+		cap.set(CV_CAP_PROP_POS_FRAMES, (double)randomIndex);
 		Mat testImage;
 		cap.read(testImage);
 
 		//Write this test image out to the folder
-		char *buffer = new char[255];
-		_itoa_s(listIndex[i], buffer, 255, 10);
-		string testFileName = "Data/Test_images/" + categoryName + "/" + videoName + "/" + videoName + "_ID_" + buffer + ".png";
+		char buffer[21];
+		_itoa(randomIndex, buffer, 10);
+		string name = GetName(_listShot[i]);
+		string testFileName = "Data/Test_images/" + categoryName + "/" + videoName + "/" + name + "_" + buffer + ".jpg";
 
 		//Write image to test data
 		imwrite(testFileName, testImage);
-		delete buffer;
 	}
 }
 
 void CreateTestSet(string categoryName = "")
 {
-	string pathRaw = "Data/Raws/" + categoryName + "/";
+	string pathRaw = "Data/Key frames/" + categoryName + "/";
 	vector<string> _listRawName = ReadFileList(pathRaw.c_str());
 
 	string pathTest = "Data/Test_images/" + categoryName + "/";
 	if (CreateDirectoryA(pathTest.c_str() , NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		int numFilePerVideo = _listRawName.size() * 10;
+		int numFilePerVideo = 100;// _listRawName.size() * 10;
 		for (int i = 0; i < _listRawName.size(); i++)
 		{
-			string rawVideoPath = pathRaw + _listRawName[i];
+			string rawVideoPath = "Data/Video shots/" + categoryName + "/" + _listRawName[i];
 
-			string videoName = _listRawName[i].substr(0, _listRawName[i].size() - 4);
-			string testVideoPath = pathTest + videoName;
+			string testVideoPath = pathTest + _listRawName[i];
 
-			cout << "Extract test frame from video " << videoName << endl;
+			cout << "Extract test frame from video " << _listRawName[i] << endl;
 			if (CreateDirectoryA(testVideoPath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 			{
 				DeleteAllFiles(testVideoPath);
 
-				RandomizeFrameTest(rawVideoPath, categoryName, videoName, numFilePerVideo);
+				RandomizeFrameTest(rawVideoPath, categoryName, _listRawName[i], numFilePerVideo);
 			}
 			else
 			{
@@ -284,12 +280,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		cout << "Please specify task to do:" << endl;
 		cout << "1. Keyframe extraction" << endl;
 		cout << "2. Create feature database" << endl;
-		cout << "3. Evaluate database using a set of test image" << endl;
+		cout << "3. Evaluate video retrieval using set of test image" << endl;
+		cout << "4. Evaluate shot retrieval using set of test image" << endl;
+		cout << "5. Test with an arbitrary image" << endl;
 		cout << "Please enter your choice: ";
 		cin >> choice;
 		cout << endl;
 	}
-	while (choice<1 || choice>3);
+	while (choice<1 || choice>5);
 
 	//-----------PROCESSING-----------//
 	clock_t t;
@@ -303,6 +301,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		break;
 	case 2:
 	case 3:
+	case 4:
+	case 5:
 		int database_type = -1;
 		cout << "What kind of feature do you want to use: " << endl;
 		cout << "1. Bag of Word" << endl;
@@ -315,9 +315,35 @@ int _tmain(int argc, _TCHAR* argv[])
 		{			
 			CreateDatabase(categoryName, database_type);
 		}		
-
-		CreateTestSet(categoryName);
-		TestDatabase(categoryName, database_type);
+		else if (choice == 3)
+		{
+			char choice3;
+			cout << "Do you want to create new test set (Y/N)? ";
+			cin >> choice3;
+			if (choice3 == 'Y' || choice3 == 'y')
+			{
+				CreateTestSet(categoryName);
+			}
+			TestVideoRetrieval(categoryName, database_type);
+		}	
+		else if (choice == 4)
+		{
+			char choice4;
+			cout << "Do you want to create new test set (Y/N)? ";
+			cin >> choice4;
+			if (choice4 == 'Y' || choice4 == 'y')
+			{
+				CreateTestSet(categoryName);
+			}
+			TestShotRetrieval(categoryName, database_type);
+		}
+		else
+		{
+			string imagePath;
+			cout << "Please input path to image you want to query: ";
+			cin >> imagePath;
+			TestIndividualImage(imagePath, categoryName, database_type);
+		}
 
 		break;
 	}	
