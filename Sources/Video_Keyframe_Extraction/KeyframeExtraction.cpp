@@ -175,10 +175,14 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 				//Init values
 				Mat tempFrame;
 
+				int startID = listFrameIndex[lastIndex];
+				if (listFrameIndex[lastIndex] > 0)
+					startID++;
+
 				//Video writer
 				char *buffer = new char[255];
 				string shotID	   = _itoa(realIndex, buffer, 10);
-				string shotStartID = _itoa(listFrameIndex[lastIndex], buffer, 10);
+				string shotStartID = _itoa(startID, buffer, 10);
 				string filename    = foldername + "/shot_" + shotID + "_" + shotStartID + ".avi";
 
 				cout << "shot_" + shotID + ".avi" << endl;
@@ -186,7 +190,7 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 				//CV_FOURCC('I', 'Y', 'U', 'V')
 				VideoWriter outputWriter(filename, CV_FOURCC('X', 'V', 'I', 'D'), fps, sizeFrame, true);
 
-				for (int j = listFrameIndex[lastIndex]; j < listFrameIndex[i]; j++)
+				for (int j = startID; j <= listFrameIndex[i]; j++)
 				{
 					cap.read(tempFrame);
 
@@ -198,8 +202,10 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 
 					outputWriter.write(resizedFrame);
 
-					//cout << j << endl;
+					cout << j << endl;
 				}
+
+				//getchar();
 
 				lastIndex = i;
 

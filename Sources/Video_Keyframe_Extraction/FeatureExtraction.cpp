@@ -276,6 +276,14 @@ Mat ExtractMPEGFeature(Mat pImage)
 	Feature *featureExtractor = new Feature();
 	Frame *frame = new Frame(pImage);
 
+	//Extract Scalable Color Descriptor
+	ScalableColorDescriptor *scalable = featureExtractor->getScalableColorD(frame,true,64);
+	for (int i = 0; i < scalable->m_NumberOfCoefficients; i++)
+	{
+		featureVector.push_back(scalable->m_ScalableHistogram[i]);
+	}
+	delete scalable;
+
 	//Extract Color Layout Descriptor
 	int numYCoef = 10;
 	int numCCoef = 6;

@@ -88,13 +88,13 @@ float ShotRetrievalPerformance(vector<int> _listRetrieveShotID, int trueShotID, 
 
 		int minNum = MIN(_listRetrieveShotID.size(), numShotConsider);
 		for (int k = 1; k <= minNum; k++)
-		{
+		{			
 			//Weight score
 			float w = (1.0f / sumW) * (1.0f / (float)k);
 			if (_listRetrieveShotID[k - 1] == trueShotID)
 			{
 				nuy += w;
-			}
+			}			
 		}
 	}
 
@@ -361,9 +361,9 @@ void TestVideoRetrieval(string categoryName, int database_type)
 	avgPrecision = avgPrecision / countTotal * 100.0f;
 	avgRecall = avgRecall / countTotal * 100.0f;
 
-	cout << "Mean Reciprocal Rank = " << avgReciprocalRank << endl;
+	cout << "MAP = " << avgReciprocalRank << endl;
 	cout << "Average Precision = " << avgPrecision << endl;
-	cout << "Averag Recall = " << avgRecall << endl;
+	cout << "Average Recall = " << avgRecall << endl;
 }
 
 void TestShotRetrieval(string categoryName, int database_type)
