@@ -83,20 +83,22 @@ float ShotRetrievalPerformance(vector<int> _listRetrieveShotID, int trueShotID, 
 	if (_listRetrieveShotID.size() > 0)
 	{
 		float sumW = 0;
-		for (int j = 1; j <= _listRetrieveShotID.size(); j++)
+		for (int j = 1; j <= 1; j++)
 			sumW += 1.0f / (float)j;
 
 		int minNum = MIN(_listRetrieveShotID.size(), numShotConsider);
-		for (int k = 1; k <= minNum; k++)
+		for (int k = 1; k <= numShotConsider; k++)
 		{			
-			//Weight score
-			float w = (1.0f / sumW) * (1.0f / (float)k);
+			//Weight score			
 			if (_listRetrieveShotID[k - 1] == trueShotID)
 			{
+				float w = (1.0f / sumW) * (1.0f / (float)k);
 				nuy += w;
 			}			
 		}
 	}
+
+	cout << "Weight score = " << nuy << endl;
 
 	return nuy;
 }
@@ -175,9 +177,9 @@ vector<int> RetrieveShot(string videoName, Mat trainingData, Mat trainingLabel, 
 
 //	float threshold = 0.3f;
 	vector<int> _listResultShotID;
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < _listShotDistance.size(); i++)
 	{
-//		if (_listShotDistance[i] < threshold)
+		if (i < 5)
 		{
 			char numstr[21];
 			float seconds = _listKeyID[_listIndex[i]] / fps;
@@ -190,9 +192,9 @@ vector<int> RetrieveShot(string videoName, Mat trainingData, Mat trainingLabel, 
 			time += ":";
 			time += _itoa(ss, numstr, 10);
 			cout << i + 1 << ". shot " << _listShotID[_listIndex[i]] << " at " << time << " with distance = " << _listShotDistance[i] << endl;
-		
-			_listResultShotID.push_back(_listShotID[_listIndex[i]]);
 		}
+
+		_listResultShotID.push_back(_listShotID[_listIndex[i]]);
 	}
 	
 	return _listResultShotID;
@@ -240,6 +242,10 @@ void TestIndividualImage(string imagePath, string categoryName, int database_typ
 
 	vector<string> _litsRawClass = ReadFileList("Data/Raws/" + categoryName + "/");
 
+	clock_t t;
+
+	t = clock();
+
 	//---Extract feature based on database_type
 	Mat queryFeature;
 	if (database_type == 1)
@@ -252,7 +258,7 @@ void TestIndividualImage(string imagePath, string categoryName, int database_typ
 	if (predictLabels.size() > 0)
 	{
 		cout << "This image can belong to: " << endl;
-		for (int j = 0; j < predictLabels.size(); j++)
+		for (int j = 0; j < 3; j++)
 		{
 			int predictLabel = predictLabels[j];
 			cout << _litsRawClass[predictLabel] << endl;
@@ -266,6 +272,10 @@ void TestIndividualImage(string imagePath, string categoryName, int database_typ
 	{
 		cout << "No video match the query image" << endl << endl;
 	}
+
+	t = clock() - t;
+
+	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to complete all tasks" << endl;
 }
 
 void TestVideoRetrieval(string categoryName, int database_type)
@@ -426,7 +436,7 @@ void TestShotRetrieval(string categoryName, int database_type)
 
 		countTotal += _listTestImage.size();
 
-		avgPrecisionShotRetrieval = avgPrecisionShotRetrieval / _listTestImage.size() * 100.0f;
+		avgPrecisionShotRetrieval = avgPrecisionShotRetrieval / _listTestImage.size();// *100.0f;
 		cout << _listTestClass[index] << " = " << avgPrecisionShotRetrieval << endl;
 
 		_listPrecisionShot.push_back(avgPrecisionShotRetrieval);
@@ -439,6 +449,8 @@ void TestShotRetrieval(string categoryName, int database_type)
 		avgPrecision += _listPrecisionShot[i];
 	}
 	out << "Average precision = " << avgPrecision / (float)_listPrecisionShot.size() << endl;
+
+	cout << endl << "Average precision = " << avgPrecision / (float)_listPrecisionShot.size() << endl;
 
 	out.close();
 }

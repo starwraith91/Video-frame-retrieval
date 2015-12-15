@@ -130,18 +130,22 @@ void VideoShotExtraction(string videoName, string categoryName="", int width = 0
 	string folderName = GetName(videoName);
 	if (CreateDirectoryA(path.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		string result = "Data/Video shots/" + categoryName + "/" + folderName + "_shot.avi";
+		string result = "Data/Video_shots/" + categoryName + "/" + folderName + "_shot.avi";
 
 		VideoSegmentation(path + videoName, result, 1, -1, 1.0f, width, height);
 	}
 
 	//Run video shot extraction code
 	VideoCapture cap(path + videoName);
-	string shotDir = "Data/Video shots/" + categoryName + "/";
+	string shotDir = "Data/Video_shots/" + categoryName + "/";
 	if (CreateDirectoryA(shotDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
 		string shotpath = shotDir + folderName + "_shot.avi.txt";
 		VideoShotExtractor(cap, categoryName + "/" + folderName, shotpath, width, height);
+	}
+	else
+	{
+		cout << "Cannot open shot directory" << endl;
 	}
 }
 
@@ -191,7 +195,7 @@ void RandomizeFrameTest(string rawVideoPath, string categoryName, string videoNa
 
 void CreateTestSet(string categoryName = "")
 {
-	string pathRaw = "Data/Key frames/" + categoryName + "/";
+	string pathRaw = "Data/Keyframes/" + categoryName + "/";
 	vector<string> _listRawName = ReadFileList(pathRaw.c_str());
 
 	string pathTest = "Data/Test_images/" + categoryName + "/";
@@ -200,7 +204,7 @@ void CreateTestSet(string categoryName = "")
 		int numFilePerVideo = 100;// _listRawName.size() * 10;
 		for (int i = 0; i < _listRawName.size(); i++)
 		{
-			string rawVideoPath = "Data/Video shots/" + categoryName + "/" + _listRawName[i];
+			string rawVideoPath = "Data/Video_shots/" + categoryName + "/" + _listRawName[i];
 
 			string testVideoPath = pathTest + _listRawName[i];
 
@@ -223,8 +227,6 @@ void CreateTestSet(string categoryName = "")
 	}
 }
 
-
-
 //-----MAIN RUNNING CODE-----//
 
 void KeyframeExtraction(string categoryName)
@@ -246,6 +248,33 @@ void KeyframeExtraction(string categoryName)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	//string videoName = "Data/shot_523_57122.avi";
+	//VideoCapture tempCap(videoName);
+	//int numframe = tempCap.get(CV_CAP_PROP_FRAME_COUNT);
+	//for(int i=0;i<numframe;i++)
+	//{
+	//	char buffer[21];
+	//	_itoa(i, buffer, 10);
+	//	string filename = "Data/Temp/frame_";
+	//	filename.append(buffer);
+	//	filename.append(".jpg");
+	//
+	//	Mat frame = ExtractFrameFromVideo(tempCap, i);
+	//	imwrite(filename, frame);
+	//}
+	//vector<int> chosenIDs = KeyframeCurvatureExtractor(tempCap);
+	//for (int i = 0; i < chosenIDs.size(); i++)
+	//{
+	//	char buffer[21];
+	//	_itoa(chosenIDs[i], buffer, 10);
+	//	string filename = "Data/shot_6_2475_";
+	//	filename.append(buffer);
+	//	filename.append(".jpg");
+
+	//	Mat frame = ExtractFrameFromVideo(tempCap, chosenIDs[i]);
+	//	imwrite(filename, frame);
+	//}
+
 	//------------CATEGORY_SELECTION---------------//
 	int categoryID = -1;
 	string categoryName = "";
@@ -290,9 +319,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	while (choice<1 || choice>5);
 
 	//-----------PROCESSING-----------//
-	clock_t t;
-
-	t = clock();
 
 	switch (choice)
 	{
@@ -347,10 +373,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		break;
 	}	
-
-	t = clock() - t;
-
-	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to complete all tasks" << endl;
 
 	return 0;
 }

@@ -128,7 +128,7 @@ void VideoShotExtractor(VideoCapture cap, string destinationFolder, string shotp
 	ifstream in(shotpath);
 	vector<int> listFrameIndex;
 
-	string foldername = "Data/Video shots/" + destinationFolder;
+	string foldername = "Data/Video_shots/" + destinationFolder;
 	if (CreateDirectoryA(foldername.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
 		int tempVal = 0;
@@ -286,8 +286,8 @@ vector<int> KeyframeCurvatureExtractor(VideoCapture cap)
 void ExtractAndSaveKeyFrame(string videoName, string categoryName="")
 {
 	//Extract key frames from a list of shots
-	string filepath = "Data/Video shots/" + categoryName + "/" + videoName + "/";
-	string destPath = "Data/Key frames/" + categoryName + "/" + videoName + "/";
+	string filepath = "Data/Video_shots/" + categoryName + "/" + videoName + "/";
+	string destPath = "Data/Keyframes/" + categoryName + "/" + videoName + "/";
 	vector<string> listFileName = ReadFileList(filepath);
 
 	if ( !CreateDirectoryA(destPath.c_str(), NULL) && ERROR_ALREADY_EXISTS != GetLastError())
@@ -330,10 +330,9 @@ void ExtractAndSaveKeyFrame(string videoName, string categoryName="")
 					resultPath.append(name);
 					resultPath.append("_");
 
-					char *buffer = new char[255];
+					char buffer[21];
 					resultPath.append(_itoa(keyFrames[i], buffer, 10));
 					resultPath.append(".jpg");
-					delete buffer;
 
 					Mat frame = ExtractFrameFromVideo(cap, keyFrames[i]);
 					if (!frame.empty())

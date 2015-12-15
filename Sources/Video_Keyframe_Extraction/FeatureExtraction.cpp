@@ -45,7 +45,6 @@ void CreateVocaburary(string categoryName, BOWImgDescriptorExtractor &bowDE, int
 	//Get a large set of images to be training set
 	string trainpath = "Data/Key frames/" + categoryName + "/";
 	vector<string> _listClass = ReadFileList(trainpath);
-	numClassVideo = _listClass.size();
 
 	int numClass = (int)_listClass.size();
 	BOWKMeansTrainer bowTrainer(dictionarySize, tc, retries, flags);
@@ -55,7 +54,7 @@ void CreateVocaburary(string categoryName, BOWImgDescriptorExtractor &bowDE, int
 		vector<string> _listStringName = ReadFileList(path.c_str());
 		Shuffle(&_listStringName[0], _listStringName.size());
 
-		int numFileName = 50;
+		int numFileName = numClass / 10;
 		for (int j = 0; j < numFileName; j++)
 		{
 			string filename = path + _listStringName[j];
@@ -111,7 +110,7 @@ Mat LoadBOWDictionaryFromFile(string filename)
 void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDetector detector, BOWImgDescriptorExtractor bowDE)
 {
 	//Get a large set of image to be training set
-	string trainpath = "Data/Key frames/" + categoryName + "/";
+	string trainpath = "Data/Keyframes/" + categoryName + "/";
 
 	vector<string> _listClass = ReadFileList(trainpath);
 	numClassVideo = _listClass.size();
@@ -132,8 +131,18 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 	Mat trainingData(0, dictionarySize, CV_32FC1);
 	Mat trainingLabel(0, 1, CV_32SC1);
 
+	string pathTrainData = "Data/Training_Data/" + categoryName + "/BOW/";
 	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
+		//Check for data existence
+		FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::READ);
+		if (fs.isOpened())
+		{
+			cout << "Training data for " << _listClass[classIndex] << " is already exist" << endl;
+			fs.release();
+			continue;
+		}
+
 		string path = trainpath + _listClass[classIndex] + "/";
 		vector<string> _listStringName = ReadFileList(path.c_str());
 
@@ -169,7 +178,6 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
 
 		//Write training data to file for future use	
-		string pathTrainData = "Data/Training_Data/" + categoryName + "/BOW/";
 		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
 			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
@@ -201,7 +209,7 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 void CreateMPEGTrainingSet(string categoryName)
 {
 	//Get a large set of image to be training set
-	string trainpath = "Data/Key frames/" + categoryName + "/";
+	string trainpath = "Data/Keyframes/" + categoryName + "/";
 
 	vector<string> _listClass = ReadFileList(trainpath);
 	numClassVideo = _listClass.size();
@@ -209,8 +217,19 @@ void CreateMPEGTrainingSet(string categoryName)
 	Mat trainingData(0, 1, CV_32FC1);
 	Mat trainingLabel(0, 3, CV_32SC1);
 
+	string pathTrainData = "Data/Training_data/" + categoryName + "/MPEG7/";
+
 	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
+		//Check for data existence	
+		FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::READ);
+		if (fs.isOpened())
+		{
+			cout << "Training data for " << _listClass[classIndex] << " is already exist" << endl;
+			fs.release();
+			continue;
+		}
+
 		string path = trainpath + _listClass[classIndex] + "/";
 		vector<string> _listStringName = ReadFileList(path.c_str());
 
@@ -220,7 +239,6 @@ void CreateMPEGTrainingSet(string categoryName)
 		for (int filenameIndex = 0; filenameIndex < numFileName; filenameIndex++)
 		{
 			string filename = path + _listStringName[filenameIndex];
-
 			cout << filename << endl;
 
 			Mat testImage  = imread(filename);
@@ -241,7 +259,7 @@ void CreateMPEGTrainingSet(string categoryName)
 		cout << "There are " << trainingData.size() << " sample images with " << trainingLabel.size() << " classes." << endl;
 
 		//Write training data to file for future use	
-		string pathTrainData = "Data/Training_data/" + categoryName + "/MPEG7/";
+		
 		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
 			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
