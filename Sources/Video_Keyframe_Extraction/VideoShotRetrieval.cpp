@@ -5,7 +5,8 @@ extern int dictionarySize;
 extern SiftFeatureDetector detector;
 extern BOWImgDescriptorExtractor bowDE;
 
-vector<string> SetupModel(string categoryName, vector<Mat> &trainData, vector<Mat> &trainLabels, int database_type)
+vector<string> SetupModel(string categoryName, vector<Mat> &trainData, vector<Mat> &trainLabels, 
+						  vector<float> &videoFPS, int database_type)
 {
 	cout << "Loading training data..." << endl << endl;
 
@@ -22,10 +23,12 @@ vector<string> SetupModel(string categoryName, vector<Mat> &trainData, vector<Ma
 	{
 		string pathData = path + _listTrainingData[i];
 		Mat trainingData, trainingLabel;
-		LoadBOWTrainingSet(pathData, trainingData, trainingLabel);
+		float fps;
+		LoadDataFromFile(pathData, trainingData, trainingLabel, fps);
 
 		trainData.push_back(trainingData);
 		trainLabels.push_back(trainingLabel);
+		videoFPS.push_back(fps);
 	}
 
 	return _listTrainingData;
@@ -98,12 +101,12 @@ float ShotRetrievalPerformance(vector<int> _listRetrieveShotID, int trueShotID, 
 		}
 	}
 
-	cout << "Weight score = " << nuy << endl;
+//	cout << "Weight score (" << numShotConsider << " records) = " << nuy << endl;
 
 	return nuy;
 }
 
-vector<int> RetrieveShot(string videoName, Mat trainingData, Mat trainingLabel, Mat queryFeature)
+vector<int> RetrieveShot(float videoFPS, Mat trainingData, Mat trainingLabel, Mat queryFeature)
 {
 	vector<float> _listShotDistance;
 	vector<int>	  _listIndex;
@@ -172,9 +175,6 @@ vector<int> RetrieveShot(string videoName, Mat trainingData, Mat trainingLabel, 
 		_listIndex.push_back(i);
 	Sort(_listShotDistance, _listIndex, true);
 
-	VideoCapture cap(videoName);
-	float fps = cap.get(CV_CAP_PROP_FPS);
-
 //	float threshold = 0.3f;
 	vector<int> _listResultShotID;
 	for (int i = 0; i < _listShotDistance.size(); i++)
@@ -182,7 +182,7 @@ vector<int> RetrieveShot(string videoName, Mat trainingData, Mat trainingLabel, 
 		if (i < 5)
 		{
 			char numstr[21];
-			float seconds = _listKeyID[_listIndex[i]] / fps;
+			float seconds = _listKeyID[_listIndex[i]] / videoFPS;
 			float hh = seconds / 3600;
 			int mm = int(seconds / 60) % 60;
 			int ss = int(seconds) % 60;
@@ -234,13 +234,12 @@ void TestIndividualImage(string imagePath, string categoryName, int database_typ
 
 	//Load database
 	vector<Mat> trainData, trainLabels;
-	vector<string> _listTrainingData = SetupModel(categoryName, trainData, trainLabels, database_type);
+	vector<float> videoFPS;
+	vector<string> _listDataName = SetupModel(categoryName, trainData, trainLabels, videoFPS, database_type);
 
 	//Load dictionary for BOW model
 	if (database_type == 1)
 		bowDE.setVocabulary(LoadBOWDictionaryFromFile("Data/Training_Data/" + categoryName + "_BOW_dictionary.xml"));
-
-	vector<string> _litsRawClass = ReadFileList("Data/Raws/" + categoryName + "/");
 
 	clock_t t;
 
@@ -254,17 +253,17 @@ void TestIndividualImage(string imagePath, string categoryName, int database_typ
 		queryFeature = ExtractMPEGFeature(testImage);
 
 	//For each test image, retrieve list of video and check if there's any correct video in candidate list
-	vector<int> predictLabels = RetrieveVideo(_litsRawClass.size(), queryFeature, trainData);
+	vector<int> predictLabels = RetrieveVideo(_listDataName.size(), queryFeature, trainData);
 	if (predictLabels.size() > 0)
 	{
 		cout << "This image can belong to: " << endl;
 		for (int j = 0; j < 3; j++)
 		{
 			int predictLabel = predictLabels[j];
-			cout << _litsRawClass[predictLabel] << endl;
+			cout << GetName(_listDataName[predictLabel]) << endl;
 
-			string videoName = "Data/Raws/" + categoryName + "/" + _litsRawClass[predictLabel];
-			RetrieveShot(videoName, trainData[predictLabel], trainLabels[predictLabel], queryFeature);
+//			string videoName = "Data/Raws/" + categoryName + "/" + _listRawClass[predictLabel];
+			RetrieveShot(videoFPS[predictLabel], trainData[predictLabel], trainLabels[predictLabel], queryFeature);
 		}
 		cout << endl;
 	}
@@ -282,7 +281,8 @@ void TestVideoRetrieval(string categoryName, int database_type)
 {
 	//Load database
 	vector<Mat> trainData, trainLabels;
-	vector<string> _listTrainingData = SetupModel(categoryName, trainData, trainLabels, database_type);
+	vector<float> videoFPS;
+	vector<string> _listDataName = SetupModel(categoryName, trainData, trainLabels, videoFPS, database_type);
 
 	//Load dictionary for BOW model
 	if (database_type == 1)
@@ -323,7 +323,7 @@ void TestVideoRetrieval(string categoryName, int database_type)
 			//Calculate precision and recall from retrieved list
 			if (predictLabels.size() > 0)
 			{
-				cout << _listTestImage[i] << " can belong to: " << endl;
+				cout << _listTestImage[i] << " in video " << _listTestClass[index] << " can belong to: " << endl;
 				for (int j = 0; j < predictLabels.size(); j++)
 				{
 					int predictLabel = predictLabels[j];
@@ -376,28 +376,30 @@ void TestVideoRetrieval(string categoryName, int database_type)
 	cout << "Average Recall = " << avgRecall << endl;
 }
 
-void TestShotRetrieval(string categoryName, int database_type)
+void TestShotRetrieval(string categoryName, int database_type, int num_retrieve)
 {
 	string resultFile = "Data/Result_" + categoryName + "_ShotRetrieval.txt";
 	ofstream out(resultFile);
 
 	//Load database
 	vector<Mat> trainData, trainLabels;
-	vector<string> _listTrainingData = SetupModel(categoryName, trainData, trainLabels, database_type);
-
+	vector<float> videoFPS;
+	vector<string> _listDataName = SetupModel(categoryName, trainData, trainLabels, videoFPS, database_type);
+	
 	//Load dictionary for BOW model
 	if (database_type == 1)
 		bowDE.setVocabulary(LoadBOWDictionaryFromFile("Data/Training_Data/" + categoryName + "_BOW_dictionary.xml"));
 
+	//Get list of test frames
 	string pathTest = "Data/Test_images/" + categoryName + "/";
 	vector<string> _listTestClass = ReadFileList(pathTest);
-	vector<string> _litsRawClass = ReadFileList("Data/Raws/" + categoryName + "/");
 
-	int countTotal = 0;
-	vector<float> _listPrecisionShot;
+
+	vector<vector<float>> _listWeightScore;
 	for (int index = 0; index < _listTestClass.size(); index++)
 	{
-		float avgPrecisionShotRetrieval = 0.0f;
+		vector<float> avgWeigthScore;
+		avgWeigthScore.resize(num_retrieve);
 
 		string pathClass = pathTest + _listTestClass[index] + "/";
 		vector<string> _listTestImage = ReadFileList(pathClass);
@@ -414,43 +416,49 @@ void TestShotRetrieval(string categoryName, int database_type)
 				queryFeature = ExtractMPEGFeature(testImage);
 
 			//For each test image, retrieve list of shot and check if there's any correct shot in candidate list
-			string videoName = "Data/Raws/" + categoryName + "/" + _litsRawClass[index];
 			int trueShotID = IdentifyShotFromKeyFrame(_listTestImage[i]);
 
-			cout << "Retrieve shot in video " << _litsRawClass[index] << " using " << _listTestImage[i] << endl;
-			vector<int> _listShotID = RetrieveShot(videoName, trainData[index], trainLabels[index], queryFeature);
+			cout << "Retrieve shot in video " << GetName(_listDataName[index]) << " using " << _listTestImage[i] << endl;
+			vector<int> _listShotID = RetrieveShot(videoFPS[index], trainData[index], trainLabels[index], queryFeature);
 
 			//Calculate precision and recall
-			if (_listShotID.size() > 0)
+			for (int numRetrieve = 0; numRetrieve < num_retrieve; numRetrieve++)
 			{
-				float precision = ShotRetrievalPerformance(_listShotID, trueShotID, 5);
-				avgPrecisionShotRetrieval += precision;
+				float weightScore = ShotRetrievalPerformance(_listShotID, trueShotID, numRetrieve+1);
+				avgWeigthScore[numRetrieve] += weightScore;
+			}
 
-				cout << endl;
-			}
-			else
-			{
-				cout << "No shot match the query image" << endl << endl;
-			}
+			cout << endl;
 		}
 
-		countTotal += _listTestImage.size();
+		for (int i = 0; i < num_retrieve; i++)
+		{
+			avgWeigthScore[i] /= _listTestImage.size();
+		}
 
-		avgPrecisionShotRetrieval = avgPrecisionShotRetrieval / _listTestImage.size();// *100.0f;
-		cout << _listTestClass[index] << " = " << avgPrecisionShotRetrieval << endl;
-
-		_listPrecisionShot.push_back(avgPrecisionShotRetrieval);
+		_listWeightScore.push_back(avgWeigthScore);
 	}
 
-	float avgPrecision = 0.0f;
-	for (int i = 0; i < _listPrecisionShot.size(); i++)
+	vector<float> avgWeightScorePerNumRetrieval;
+	avgWeightScorePerNumRetrieval.resize(num_retrieve);
+	for (int i = 0; i < _listWeightScore.size(); i++)
 	{
-		out << _listTestClass[i].c_str() << "			" << _listPrecisionShot[i] << endl;
-		avgPrecision += _listPrecisionShot[i];
+		float avgPrecision = 0.0f;
+		out << _listTestClass[i].c_str() << endl;
+		for (int j = 0; j < num_retrieve; j++)
+		{
+			out << j+1 << ". " << _listWeightScore[i][j] << endl;
+			avgWeightScorePerNumRetrieval[j] += _listWeightScore[i][j];
+		}
+		out << endl;
 	}
-	out << "Average precision = " << avgPrecision / (float)_listPrecisionShot.size() << endl;
 
-	cout << endl << "Average precision = " << avgPrecision / (float)_listPrecisionShot.size() << endl;
+	out << endl << "Average weight score: " << endl;
+	for (int i = 0; i < num_retrieve; i++)
+	{ 
+		avgWeightScorePerNumRetrieval[i] /= (float)_listWeightScore.size();
+		out << i + 1 << ". " << avgWeightScorePerNumRetrieval[i] << endl;
+	}
 
 	out.close();
 }

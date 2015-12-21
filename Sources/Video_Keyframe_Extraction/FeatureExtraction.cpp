@@ -131,6 +131,10 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 	Mat trainingData(0, dictionarySize, CV_32FC1);
 	Mat trainingLabel(0, 1, CV_32SC1);
 
+	//Get list of raw video to get the fps to store
+	string pathRawData = "Data/Raws/" + categoryName + "/";
+	vector<string> _listRawVideos = ReadFileList(pathRawData);
+
 	string pathTrainData = "Data/Training_Data/" + categoryName + "/BOW/";
 	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
@@ -167,7 +171,13 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 				trainingData.push_back(bowDescriptor);
 
 				int shotID = IdentifyShotFromKeyFrame(_listStringName[filenameIndex]);
-				trainingLabel.push_back(shotID);
+				int startID = IdentifyStartIDFromKeyFrame(_listStringName[filenameIndex]);
+				int keyID = IdentifyKeyIDFromKeyFrame(_listStringName[filenameIndex]);
+				Mat tempMat(1, 3, CV_32SC1);
+				tempMat.at<int>(0, 0) = shotID;
+				tempMat.at<int>(0, 1) = startID;
+				tempMat.at<int>(0, 2) = keyID;
+				trainingLabel.push_back(tempMat);
 			}
 			else
 			{
@@ -183,12 +193,15 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
 			fs << "data_matrix" << trainingData;
 			fs << "data_label" << trainingLabel;
+
+			VideoCapture cap(pathRawData + _listRawVideos[classIndex]);
+			float fps = (float)cap.get(CV_CAP_PROP_FPS);
+			fs << "video_fps" << fps;
 		}
 		else
 		{
 			cout << "Cannot find and create " << pathTrainData << " directory" << endl;
 		}
-
 
 		trainingData.release();
 
@@ -210,23 +223,27 @@ void CreateMPEGTrainingSet(string categoryName)
 {
 	//Get a large set of image to be training set
 	string trainpath = "Data/Keyframes/" + categoryName + "/";
-
 	vector<string> _listClass = ReadFileList(trainpath);
 	numClassVideo = _listClass.size();
 
 	Mat trainingData(0, 1, CV_32FC1);
 	Mat trainingLabel(0, 3, CV_32SC1);
 
-	string pathTrainData = "Data/Training_data/" + categoryName + "/MPEG7/";
+	//Get list of raw video to get the fps to store
+	string pathRawData = "Data/Raws/" + categoryName + "/";
+	vector<string> _listRawVideos = ReadFileList(pathRawData);
 
+	//For each keyframe in each video, extract MPEG7 feature then store all of them in a XML file 
+	//Beside feature vector, XML file also store shotID, startFrameID, keyframeID and video FPS
+	string pathTrainData = "Data/Training_data/" + categoryName + "/MPEG7/";
 	for (int classIndex = 0; classIndex < numClassVideo; classIndex++)
 	{
 		//Check for data existence	
-		FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::READ);
-		if (fs.isOpened())
+		FileStorage fsR(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::READ);
+		if (fsR.isOpened())
 		{
 			cout << "Training data for " << _listClass[classIndex] << " is already exist" << endl;
-			fs.release();
+			fsR.release();
 			continue;
 		}
 
@@ -262,9 +279,16 @@ void CreateMPEGTrainingSet(string categoryName)
 		
 		if (CreateDirectoryA(pathTrainData.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
-			FileStorage fs(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
-			fs << "data_matrix" << trainingData;
-			fs << "data_label" << trainingLabel;
+			FileStorage fsW(pathTrainData + _listClass[classIndex] + ".xml", FileStorage::WRITE);
+			fsW << "data_matrix" << trainingData;
+			fsW << "data_label" << trainingLabel;
+
+			VideoCapture cap(pathRawData + _listRawVideos[classIndex]);
+			float fps = (float)cap.get(CV_CAP_PROP_FPS);
+			fsW << "video_fps"  << fps;
+			fsW << "video_name" << _listClass[classIndex];
+
+			fsW.release();
 		}
 		else
 		{
@@ -329,7 +353,7 @@ Mat ExtractMPEGFeature(Mat pImage)
 	EdgeHistogramDescriptor *edge = featureExtractor->getEdgeHistogramD(frame);
 	for (int i = 0; i < edge->GetSize(); i++)
 	{
-		featureVector.push_back(edge->GetEdgeHistogramD()[i]);
+		featureVector.push_back( (float)edge->GetEdgeHistogramD()[i] );
 	}
 	delete edge;
 
@@ -340,7 +364,7 @@ Mat ExtractMPEGFeature(Mat pImage)
 	return ToMat(featureVector);
 }
 
-bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label)
+bool LoadDataFromFile(string path, Mat &training_data, Mat &training_label, float &videoFPS)
 {
 	// read:
 	FileStorage fs(path, FileStorage::READ);
@@ -349,6 +373,7 @@ bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label)
 	{
 		fs["data_matrix"] >> training_data;
 		fs["data_label"] >> training_label;
+		fs["video_fps"] >> videoFPS;
 		fs.release();
 		return true;
 	}

@@ -42,6 +42,18 @@ vector<string> ReadFileList(string path)
 	return _listStringName;
 }
 
+string GetName(string filename)
+{
+	for (int i = 0; i<filename.size(); i++)
+	{
+		if (filename[i] == '.')
+		{
+			return filename.substr(0, i);
+		}
+	}
+	return "";
+}
+
 int IdentifyShotFromKeyFrame(string filename)
 {
 	int shotID = -1;

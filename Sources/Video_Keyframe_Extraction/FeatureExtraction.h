@@ -60,7 +60,7 @@ void CreateBOWTrainingSet(string categoryName, int dictionarySize, SiftFeatureDe
 
 void CreateMPEGTrainingSet(string categoryName);
 
-bool LoadBOWTrainingSet(string path, Mat &training_data, Mat &training_label);
+bool LoadDataFromFile(string path, Mat &training_data, Mat &training_label, float &videoFPS);
 
 //Extract color, edge and texture hist
 KeyFrameDescriptor CalcMPEGDescriptor(Mat img);

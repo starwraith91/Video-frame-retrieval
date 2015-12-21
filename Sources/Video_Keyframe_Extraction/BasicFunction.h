@@ -45,6 +45,8 @@ vector<string> ReadFileList(string path);
 
 void ShowDict(map<string, int> _dict);
 
+string GetName(string filename);
+
 int IdentifyShotFromKeyFrame(string filename);
 
 int IdentifyStartIDFromKeyFrame(string filename);

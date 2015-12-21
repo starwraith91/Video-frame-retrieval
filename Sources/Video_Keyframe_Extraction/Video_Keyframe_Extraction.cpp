@@ -19,87 +19,6 @@ BOWImgDescriptorExtractor bowDE(extractor, matcher);
 ////-----TEMPORARY_FUNCTION-----//
 
 //Return name of file without extension
-string GetName(string filename)
-{
-	for (int i = 0; i<filename.size(); i++)
-	{
-		if (filename[i] == '.')
-		{
-			return filename.substr(0, i);
-		}
-	}
-	return "";
-}
-
-//
-//string IdentifyIDFromKeyFrame(string filename)
-//{
-//	int shotID = -1;
-//
-//	int lc_right = 0, lc_left = 0;
-//	int countLC = 0;
-//	for (int characterIndex = 0; characterIndex < filename.size(); characterIndex++)
-//	{
-//		if (filename[characterIndex] == '_')
-//		{
-//			if (countLC == 1)
-//				lc_left = characterIndex + 1;
-//			countLC++;
-//		}
-//		else if (filename[characterIndex] == '.')
-//		{
-//			lc_right = characterIndex;
-//			break;
-//		}
-//	}
-//
-//	return filename.substr(lc_left, lc_right - lc_left);
-//}
-//
-//void RepairKeyframeInfo(string videoShotPath, string videoKeyframePath)
-//{
-//	vector<int> _listShotID;
-//	vector<string> _listShot = ReadFileList(videoShotPath);
-//	for (int i = 0; i < _listShot.size(); i++)
-//	{
-//		int ID = IdentifyShotFromKeyFrame(_listShot[i]);
-//		_listShotID.push_back(ID);
-//	}
-//	Sort(_listShotID, _listShot, true);
-//
-//	vector<int> _listKeyShotID;
-//	vector<string> _listKeyframe = ReadFileList(videoKeyframePath);
-//	for (int i = 0; i < _listKeyframe.size(); i++)
-//	{
-//		int ID = IdentifyShotFromKeyFrame(_listKeyframe[i]);
-//		_listKeyShotID.push_back(ID);
-//	}
-//	Sort(_listKeyShotID, _listKeyframe, true);
-//
-//	char buffer[21];
-//	int prevShotID = IdentifyShotFromKeyFrame(_listKeyframe[0]);
-//	int ShotIndex = 0;
-//	for (int i = 0; i < _listKeyframe.size(); i++)
-//	{
-//		int shotID = IdentifyShotFromKeyFrame(_listKeyframe[i]);
-//		if (shotID != prevShotID)
-//		{
-//			ShotIndex++;
-//		}
-//		string shotName = GetName(_listShot[ShotIndex]);
-//		string keyName = IdentifyIDFromKeyFrame(_listKeyframe[i]);
-//		shotName += "_" + keyName + ".jpg";
-//
-//		string oldname = videoKeyframePath + _listKeyframe[i];
-//		string newname = videoKeyframePath + shotName;
-//		rename(oldname.c_str(), newname.c_str());
-//
-//		cout << _listKeyframe[i] << " ---> " << shotName << endl;
-//
-//		prevShotID = shotID;
-//	}
-//}
-
 void VideoSegmentation(string path,string result,int level,int numFrame,float percent,int width=0,int height=0)
 {	
 	VideoCapture cap(path);
@@ -234,17 +153,114 @@ void KeyframeExtraction(string categoryName)
 	string videoName;
 	cout << "Please specify video name (abc.xyz): ";
 	cin >> videoName;
+	cout << endl;
 
 	string choice;
 	cout << "Do you want to summarize the video before extracting keyframe (Y/N): ";
 	cin >> choice;
-	if ( choice.compare("Y")==0 )
+	if (choice.compare("Y") == 0 || choice.compare("y") == 0)
 		VideoShotExtraction(videoName, categoryName);
 
 	string foldername = GetName(videoName);
 	ExtractAndSaveKeyFrame(foldername, categoryName);
 }
 
+void UserInterface()
+{
+	//------------CATEGORY_SELECTION---------------//
+	int categoryID = -1;
+	string categoryName = "";
+	vector<string> categoryList = ReadFileList("Data/Raws/");
+	cout << "Please specify category name of videos: " << endl;
+	do
+	{
+		for (int i = 0; i < categoryList.size(); i++)
+		{
+			cout << i << ". " << categoryList[i] << endl;
+		}
+		cout << "Enter your choice: ";
+		cin >> categoryID;
+	} while (categoryID < 0 && categoryID >= categoryList.size());
+	categoryName = categoryList[categoryID];
+
+	//-----------ACTION_SELECTION-------------//
+	int choice = -1;
+	do
+	{
+		system("CLS");
+		cout << "Please specify task to do:" << endl;
+		cout << "1. Keyframe extraction" << endl;
+		cout << "2. Create feature database" << endl;
+		cout << "3. Evaluate video retrieval using set of test image" << endl;
+		cout << "4. Evaluate shot retrieval using set of test image" << endl;
+		cout << "5. Test with an arbitrary image" << endl;
+		cout << "Please enter your choice: ";
+		cin >> choice;
+		cout << endl;
+	} while (choice<1 || choice>5);
+
+	//-----------PROCESSING-----------//
+
+	switch (choice)
+	{
+	case 1:
+		KeyframeExtraction(categoryName);
+		break;
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+		int database_type = -1;
+		cout << "What kind of feature do you want to use: " << endl;
+		cout << "1. Bag of Word" << endl;
+		cout << "2. MPEG-7" << endl;
+		cout << "Please enter your choice: ";
+		cin >> database_type;
+		cout << endl;
+
+		if (choice == 2)
+		{
+			CreateDatabase(categoryName, database_type);
+		}
+		else if (choice == 3)
+		{
+			string choice3;
+			cout << "Do you want to create new test set (Y/N)? ";
+			cin >> choice3;
+			if (choice3.compare("Y") == 0 || choice3.compare("y") == 0)
+			{
+				CreateTestSet(categoryName);
+			}
+			TestVideoRetrieval(categoryName, database_type);
+		}
+		else if (choice == 4)
+		{
+			string choice4;
+			cout << "Do you want to create new test set (Y/N)? ";
+			cin >> choice4;
+			if (choice4.compare("Y") == 0 || choice4.compare("y") == 0)
+			{
+				CreateTestSet(categoryName);
+			}
+			cout << endl;
+
+			int num_retrieve;
+			cout << "How many items do you want to retrieve? ";
+			cin >> num_retrieve;
+			cout << endl;
+			TestShotRetrieval(categoryName, database_type, num_retrieve);
+		}
+		else
+		{
+			string imagePath;
+			cout << "Please specify path to query image: ";
+			cin >> imagePath;
+			TestIndividualImage(imagePath, categoryName, database_type);
+		}
+
+		break;
+	}
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -275,104 +291,27 @@ int _tmain(int argc, _TCHAR* argv[])
 	//	imwrite(filename, frame);
 	//}
 
-	//------------CATEGORY_SELECTION---------------//
-	int categoryID = -1;
-	string categoryName = "";
-	vector<string> categoryList = ReadFileList("Data/Raws/");
-	cout << "Please specify category name of videos: " << endl;
+	bool isContinue;
 	do
 	{
-		for (int i = 0; i < categoryList.size(); i++)
+		UserInterface();
+
+		string choiceContinue;
+		cout << "Is there anything else you want to do (Y/N)? ";
+		cin >> choiceContinue;
+		if (choiceContinue.compare("Y") == 0 || choiceContinue.compare("y") == 0)
 		{
-			cout << i << ". " << categoryList[i] << endl;
-		}
-		cout << "Enter your choice: ";
-		cin >> categoryID;
-	} 
-	while (categoryID < 0 && categoryID >= categoryList.size());
-	categoryName = categoryList[categoryID];
-
-	//string _videoPath = "Data/Key frames/" + categoryName + "/";
-	//vector<string> _listVideo = ReadFileList(_videoPath);
-	//for (int i = 0; i < _listVideo.size(); i++)
-	//{
-	//	string videoShotPath = "Data/Video shots/" + categoryName + "/" + _listVideo[i] + "/";
-	//	string videoKeyframePath = _videoPath + _listVideo[i] + "/";
-	//	RepairKeyframeInfo(videoShotPath, videoKeyframePath);
-	//}
-
-	//-----------ACTION_SELECTION-------------//
-	int choice = -1;
-	do
-	{
-		system("CLS");
-		cout << "Please specify task to do:" << endl;
-		cout << "1. Keyframe extraction" << endl;
-		cout << "2. Create feature database" << endl;
-		cout << "3. Evaluate video retrieval using set of test image" << endl;
-		cout << "4. Evaluate shot retrieval using set of test image" << endl;
-		cout << "5. Test with an arbitrary image" << endl;
-		cout << "Please enter your choice: ";
-		cin >> choice;
-		cout << endl;
-	}
-	while (choice<1 || choice>5);
-
-	//-----------PROCESSING-----------//
-
-	switch (choice)
-	{
-	case 1:
-		KeyframeExtraction(categoryName);
-		break;
-	case 2:
-	case 3:
-	case 4:
-	case 5:
-		int database_type = -1;
-		cout << "What kind of feature do you want to use: " << endl;
-		cout << "1. Bag of Word" << endl;
-		cout << "2. MPEG-7" << endl;
-		cout << "Please enter your choice: ";
-		cin >> database_type;
-		cout << endl;
-
-		if (choice == 2)
-		{			
-			CreateDatabase(categoryName, database_type);
-		}		
-		else if (choice == 3)
-		{
-			char choice3;
-			cout << "Do you want to create new test set (Y/N)? ";
-			cin >> choice3;
-			if (choice3 == 'Y' || choice3 == 'y')
-			{
-				CreateTestSet(categoryName);
-			}
-			TestVideoRetrieval(categoryName, database_type);
-		}	
-		else if (choice == 4)
-		{
-			char choice4;
-			cout << "Do you want to create new test set (Y/N)? ";
-			cin >> choice4;
-			if (choice4 == 'Y' || choice4 == 'y')
-			{
-				CreateTestSet(categoryName);
-			}
-			TestShotRetrieval(categoryName, database_type);
+			isContinue = true;
 		}
 		else
 		{
-			string imagePath;
-			cout << "Please input path to image you want to query: ";
-			cin >> imagePath;
-			TestIndividualImage(imagePath, categoryName, database_type);
+			isContinue = false;
 		}
+		system("CLS");
 
-		break;
-	}	
+	} while (isContinue);
+
+
 
 	return 0;
 }

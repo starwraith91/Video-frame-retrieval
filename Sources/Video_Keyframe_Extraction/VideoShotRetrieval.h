@@ -11,7 +11,7 @@ float CalcDistanceToFeatureLine(Mat f1, Mat f2, Mat fx);
 
 //Return the name of the shot which contain the query image
 //If no data is input, program will extract features from default keyframe folder
-vector<int> RetrieveShot(string videoName, Mat trainingData, Mat trainingLabel, Mat queryFeature);
+vector<int> RetrieveShot(float videoFPS, Mat trainingData, Mat trainingLabel, Mat queryFeature);
 
 //Test for real
 void TestIndividualImage(string imagePath, string categoryName, int database_type);
@@ -20,6 +20,6 @@ void TestIndividualImage(string imagePath, string categoryName, int database_typ
 void TestVideoRetrieval(string categoryName, int database_type);
 
 //Test shot retrieval
-void TestShotRetrieval(string categoryName, int database_type);
+void TestShotRetrieval(string categoryName, int database_type, int num_retrieve = 5);
 
 #endif
